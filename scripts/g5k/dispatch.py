@@ -35,7 +35,7 @@ REPO = "NoeFlandre/llms-xx-to-en-translation"
 SITE_USER = "nflandre"
 STALE_WAIT_S = 540  # just under 10 minutes: a job that starts later loses the exemption
 POLL_S = 300
-MAX_ATTEMPTS_PER_MODEL = 40
+MAX_NO_PROGRESS = 3  # consecutive jobs that finished without uploading anything
 MAX_FAILURES_PER_CLUSTER = 2
 REMOTE_JOB = "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 OAR_ID = re.compile(r"OAR_JOB_ID=(\d+)")
@@ -90,12 +90,15 @@ def save_state(state: dict[str, Any]) -> None:
     STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
 
 
-def refresh_jobs(state: dict[str, Any], now: float) -> None:
-    """Drop finished jobs; cancel jobs still waiting after STALE_WAIT_S (they would lose the exemption)."""
+def refresh_jobs(state: dict[str, Any], now: float, remaining: dict[str, int]) -> None:
+    """Drop finished jobs, count jobs that ended without progress, cancel jobs still waiting too long."""
     kept = []
     for job in state["jobs"]:
         current = job_state(job["site"], job["id"])
         if current in ("Terminated", "Error", "Gone"):
+            if remaining.get(job["model"], 0) >= job["remaining_at_submit"]:
+                no_progress = state.setdefault("no_progress", {})
+                no_progress[job["model"]] = no_progress.get(job["model"], 0) + 1
             continue
         if current == "Waiting" and now - job["submitted"] > STALE_WAIT_S:
             cancel(job["site"], job["id"])
@@ -104,16 +107,17 @@ def refresh_jobs(state: dict[str, Any], now: float) -> None:
     state["jobs"] = kept
 
 
-def pending_models(project: Project, done: set[str]) -> list[tuple[str, int]]:
-    """Models with any shard or score still missing, smallest first, with their GPU memory need."""
-    out = []
+def pending_models(project: Project, done: set[str]) -> dict[str, tuple[int, int, float]]:
+    """Incomplete models: name -> (GPU memory need in GB, missing shard and score files, size in billions)."""
+    out: dict[str, tuple[int, int, float]] = {}
     for name, model in project.models.items():
         if model.official_languages == "pending":
             continue
         shards = build_shards(name, project.plan(model))
-        if any(shard_path(s) not in done or score_path(s) not in done for s in shards):
-            out.append((model.params_b, name, model.gpu_memory_gb_min))
-    return [(name, need) for _, name, need in sorted(out)]
+        missing = sum((shard_path(s) not in done) + (score_path(s) not in done) for s in shards)
+        if missing:
+            out[name] = (model.gpu_memory_gb_min, missing, model.params_b)
+    return out
 
 
 def site_ready(site: str) -> bool:
@@ -138,7 +142,9 @@ def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> li
     return pools
 
 
-def launch(placements: list[Any], state: dict[str, Any], dry_run: bool) -> None:
+def launch(
+    placements: list[Any], state: dict[str, Any], dry_run: bool, pending: dict[str, tuple[int, int, float]]
+) -> None:
     for placement in placements:
         print(f"  -> {placement.model} on {placement.site}/{placement.cluster}", flush=True)
         if dry_run:
@@ -158,6 +164,7 @@ def launch(placements: list[Any], state: dict[str, Any], dry_run: bool) -> None:
                 "model": placement.model,
                 "submitted": time.time(),
                 "state": "Waiting",
+                "remaining_at_submit": pending[placement.model][1],
             }
         )
 
@@ -167,22 +174,23 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
     if crosses_boundary(now):
         print(f"{now:%H:%M}: a one-hour job now would cross 09:00 or 19:00; waiting", flush=True)
         return
-    done = repo_files(REPO)
-    refresh_jobs(state, time.time())
-    pending = [
-        (name, need)
-        for name, need in pending_models(project, done)
-        if state["attempts"].get(name, 0) < MAX_ATTEMPTS_PER_MODEL
-    ]
+    pending = pending_models(project, repo_files(REPO))
+    refresh_jobs(state, time.time(), {name: info[1] for name, info in pending.items()})
+    no_progress = state.get("no_progress", {})
+    ready = sorted(
+        (info[2], name, info[0])
+        for name, info in pending.items()
+        if no_progress.get(name, 0) < MAX_NO_PROGRESS
+    )
     placements = choose_placements(
-        pending,
+        [(name, need) for _, name, need in ready],
         build_pools(pools_config, state),
         running_models=frozenset(job["model"] for job in state["jobs"]),
         running_per_site=Counter(job["site"] for job in state["jobs"]),
     )
     summary = f"pending {len(pending)} models; running {len(state['jobs'])}; placements {len(placements)}"
     print(f"{now:%H:%M}: {summary}", flush=True)
-    launch(placements, state, dry_run)
+    launch(placements, state, dry_run, pending)
     save_state(state)
     for line in usage_lines(sorted({entry["site"] for entry in pools_config})):
         print(f"  policy {line}", flush=True)
