@@ -42,6 +42,8 @@ class PromptInput:
 class GenerationResult:
     text: str
     output_tokens: int
+    raw_text: str = ""
+    finish_reason: str = ""
 
 
 class Backend(Protocol):
@@ -112,7 +114,12 @@ class VllmBackend:
         for output in outputs:
             completion = output.outputs[0]
             results.append(
-                GenerationResult(text=clean_output(completion.text), output_tokens=len(completion.token_ids))
+                GenerationResult(
+                    text=clean_output(completion.text),
+                    output_tokens=len(completion.token_ids),
+                    raw_text=completion.text,
+                    finish_reason=completion.finish_reason or "",
+                )
             )
         return results
 
@@ -181,5 +188,9 @@ class TransformersBackend:
         for row in output:
             token_ids = [int(token) for token in row if int(token) != self._tokenizer.pad_token_id]
             text = self._tokenizer.decode(token_ids, skip_special_tokens=True).strip()
-            results.append(GenerationResult(text=text, output_tokens=len(token_ids)))
+            raw = self._tokenizer.decode(token_ids, skip_special_tokens=False)
+            finish = "length" if len(token_ids) >= budget else "stop"
+            results.append(
+                GenerationResult(text=text, output_tokens=len(token_ids), raw_text=raw, finish_reason=finish)
+            )
         return results

@@ -6,6 +6,7 @@ Outputs are cached by content hash and written as JSON lines; failure flags are 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from collections import Counter
@@ -13,7 +14,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from xx_to_en.backends import Backend
+from xx_to_en.backends import Backend, GenerationResult, PromptInput
 from xx_to_en.benchmarks import Segment
 from xx_to_en.cache import OutputCache
 from xx_to_en.config import ModelConfig
@@ -47,6 +48,10 @@ class Translation:
     hypothesis: str
     output_tokens: int
     cached: bool
+    raw_text: str = ""
+    finish_reason: str = ""
+    prompt_sha256: str = ""
+    max_new_tokens: int = 0
 
 
 def plan_work(
@@ -109,34 +114,51 @@ def translate(
     for segment in segments:
         budget = _budget(backend, segment.source, decoding)
         key = _cache_key(model, model.prompt, decoding, segment, budget)
-        plan.append((segment, budget, key, cache.get(key)))
-    pending = [(segment, budget, key) for segment, budget, key, hit in plan if hit is None]
-    generated = _generate(pending, model, backend, iso)
+        prompt = make_prompt(model.prompt, segment, backend, iso)
+        plan.append((segment, budget, key, prompt, cache.get(key)))
+    pending = [(segment, budget, key, prompt) for segment, budget, key, prompt, hit in plan if hit is None]
+    generated = _generate(pending, backend)
     results = []
-    for segment, _, key, hit in plan:
+    for segment, budget, key, prompt, hit in plan:
+        prompt_sha = hashlib.sha256(prompt.text.encode("utf-8")).hexdigest()
         if hit is not None:
-            results.append(Translation(segment, hit, output_tokens=0, cached=True))
+            results.append(
+                Translation(
+                    segment,
+                    hit,
+                    output_tokens=0,
+                    cached=True,
+                    prompt_sha256=prompt_sha,
+                    max_new_tokens=budget,
+                )
+            )
             continue
-        text, tokens = generated[key]
-        cache.put(key, text)
-        results.append(Translation(segment, text, output_tokens=tokens, cached=False))
+        output = generated[key]
+        cache.put(key, output.text)
+        results.append(
+            Translation(
+                segment,
+                output.text,
+                output_tokens=output.output_tokens,
+                cached=False,
+                raw_text=output.raw_text,
+                finish_reason=output.finish_reason,
+                prompt_sha256=prompt_sha,
+                max_new_tokens=budget,
+            )
+        )
     return results
 
 
 def _generate(
-    pending: Sequence[tuple[Segment, int, str]],
-    model: ModelConfig,
-    backend: Backend,
-    iso: IsoLookup | None,
-) -> dict[str, tuple[str, int]]:
+    pending: Sequence[tuple[Segment, int, str, PromptInput]], backend: Backend
+) -> dict[str, GenerationResult]:
     if not pending:
         return {}
-    inputs = [make_prompt(model.prompt, segment, backend, iso) for segment, _, _ in pending]
-    budgets = [budget for _, budget, _ in pending]
-    outputs = backend.generate(inputs, budgets)
-    return {
-        key: (output.text, output.output_tokens) for (_, _, key), output in zip(pending, outputs, strict=True)
-    }
+    outputs = backend.generate(
+        [prompt for _, _, _, prompt in pending], [budget for _, budget, _, _ in pending]
+    )
+    return {key: output for (_, _, key, _), output in zip(pending, outputs, strict=True)}
 
 
 def failure_counts(translations: Sequence[Translation]) -> dict[str, int]:

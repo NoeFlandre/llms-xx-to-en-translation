@@ -31,6 +31,9 @@ trap 'rm -rf "$WORK"' EXIT
 
 cd "$SRC"
 echo "node: $(hostname)  model: $MODEL  benchmark: ${BENCHMARK:-all}  dtype: $DTYPE  budget: ${BUDGET_MIN} min"
+export GPU_NAME="$(nvidia-smi --query-gpu=name --format=csv,noheader | head -n 1)"
+export NODE_NAME="$(hostname)"
+export CODE_COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 "$GEN/bin/xx2en" work --model "$MODEL" --results-repo "$REPO" --work "$WORK" \

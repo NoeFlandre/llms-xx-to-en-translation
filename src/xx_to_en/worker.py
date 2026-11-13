@@ -18,6 +18,7 @@ from xx_to_en.cache import OutputCache
 from xx_to_en.config import BenchmarkConfig, ModelConfig
 from xx_to_en.languages import LanguageMap
 from xx_to_en.plan import Shard
+from xx_to_en.provenance import created_now
 from xx_to_en.runner import Decoding, Translation, translate
 from xx_to_en.sources import load_segments
 from xx_to_en.tables import read_table, write_table
@@ -57,8 +58,11 @@ def run_budgeted(
     return finished
 
 
-def hypothesis_rows(translations: Sequence[Translation]) -> list[dict[str, Any]]:
-    """Public hypothesis records: identifiers and output, no source or reference text."""
+def hypothesis_rows(
+    translations: Sequence[Translation], run: Mapping[str, Any] | None = None
+) -> list[dict[str, Any]]:
+    """Public hypothesis records: ids, output, raw output, finish reason, and the run settings."""
+    run = dict(run or {})
     return [
         {
             "benchmark": item.segment.benchmark,
@@ -66,8 +70,14 @@ def hypothesis_rows(translations: Sequence[Translation]) -> list[dict[str, Any]]
             "bench_lang": item.segment.bench_lang,
             "segment_id": item.segment.segment_id,
             "hypothesis": item.hypothesis,
+            "raw_hypothesis": item.raw_text,
+            "finish_reason": item.finish_reason,
+            "truncated": item.finish_reason == "length",
             "output_tokens": item.output_tokens,
+            "max_new_tokens": item.max_new_tokens,
+            "prompt_sha256": item.prompt_sha256,
             "cached": item.cached,
+            **run,
         }
         for item in translations
     ]
@@ -115,22 +125,17 @@ def generate_shard(
     iso: Callable[[str], str | None],
     decoding: Decoding,
     out_file: Path,
+    run: Mapping[str, Any] | None = None,
 ) -> None:
-    """Translate one shard and write its hypothesis records."""
+    """Translate one shard and write its hypothesis records with the run settings."""
     segments = load_shard_segments(shard, benchmarks, language_map)
     translations: list[Translation] = []
     for lang in shard.langs:
         translations.extend(
-            translate(
-                segments[lang],
-                model=model,
-                backend=backend,
-                cache=cache,
-                decoding=decoding,
-                iso=iso,
-            )
+            translate(segments[lang], model=model, backend=backend, cache=cache, decoding=decoding, iso=iso)
         )
-    write_table(out_file, hypothesis_rows(translations))
+    stamped = {**dict(run or {}), "generated_at": created_now()}
+    write_table(out_file, hypothesis_rows(translations, stamped))
 
 
 def score_shard(

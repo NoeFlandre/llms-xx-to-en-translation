@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -142,8 +143,11 @@ def run_command(project: Project, args: argparse.Namespace) -> str:
 
 
 def work_command(project: Project, args: argparse.Namespace) -> str:
-    """Generation phase: translate the pending shards of one model, upload each, within the budget."""
+    """Generation phase: translate the pending shards of one model, upload each with its provenance."""
+    from huggingface_hub import HfApi
+
     from xx_to_en.cache import OutputCache
+    from xx_to_en.provenance import manifest, run_fields
     from xx_to_en.results_store import repo_files, shard_path, upload
     from xx_to_en.runner import Decoding
     from xx_to_en.worker import generate_shard, run_budgeted
@@ -154,8 +158,7 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
         raise SystemExit(f"{model.name}: access not accepted for this account")
     files = repo_files(args.results_repo)
     todo = pending(
-        build_shards(model.name, project.plan(model)),
-        is_done=lambda shard: shard_path(shard) in files,
+        build_shards(model.name, project.plan(model)), is_done=lambda shard: shard_path(shard) in files
     )
     if args.benchmark:
         todo = [shard for shard in todo if shard.benchmark == args.benchmark]
@@ -163,7 +166,18 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
         return f"{model.name}: nothing pending"
     backend = make_backend(model, model.backend, seed=args.seed, dtype=args.dtype or None)
     cache = OutputCache(args.work / "cache")
+    decoding = Decoding(seed=args.seed)
+    revision = HfApi().model_info(model.hf_repo).sha or ""
+    run = run_fields(
+        model,
+        revision=revision,
+        decoding=decoding,
+        dtype=args.dtype or model.dtype,
+        backend=model.backend,
+        env=os.environ,
+    )
     budget_s = max(0.0, args.budget_min * 60 - (time.monotonic() - started))
+    uploaded: list[str] = []
 
     def generate(shard: Any) -> None:
         out_file = args.work / "hyp" / shard_path(shard)
@@ -175,13 +189,19 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
             benchmarks=project.benchmarks,
             language_map=project.language_map,
             iso=project.language_map.iso639_1,
-            decoding=Decoding(seed=args.seed),
+            decoding=decoding,
             out_file=out_file,
+            run=run,
         )
         upload(args.results_repo, out_file, shard_path(shard))
+        uploaded.append(shard_path(shard))
         print(f"uploaded {shard_path(shard)}", flush=True)
 
     finished = run_budgeted(todo, budget_s=budget_s, step=generate)
+    if uploaded:
+        job_manifest = args.work / "manifest.json"
+        job_manifest.write_text(json.dumps(manifest(model, run, uploaded), indent=2), encoding="utf-8")
+        upload(args.results_repo, job_manifest, f"manifests/{model.name}/job-{run['job_id'] or 'local'}.json")
     return f"{model.name}: generated {len(finished)} of {len(todo)} pending shards"
 
 

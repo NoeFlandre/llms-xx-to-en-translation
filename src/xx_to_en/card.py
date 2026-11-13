@@ -124,6 +124,9 @@ Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
 - `results/<model>/<benchmark>/<shard>.parquet`: hypotheses and token counts
 - `scores/<model>/<benchmark>/<shard>.parquet`: per-segment scores and failure flags
+- `manifests/<model>/job-<id>.json`: full model config and run settings for each job
+
+Each row carries its own provenance: `model_revision`, `prompt_template`, `prompt_version`, `prompt_sha256`, `decoding`, `seed`, `budget_*`, `max_new_tokens`, `dtype`, `backend`, `software`, `gpu`, `node`, `job_id`, `code_commit`, `generated_at`. Generated text is in `hypothesis`; the untouched model output is in `raw_hypothesis`, with `finish_reason` and `truncated`.
 
 Source and reference text are not copied: join on `(benchmark, bench_lang, segment_id)`
 with the public benchmark.
