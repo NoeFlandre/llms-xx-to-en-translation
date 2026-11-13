@@ -26,6 +26,11 @@ if [ -n "$BENCHMARK" ]; then BENCH_ARGS=(--benchmark "$BENCHMARK"); fi
 export HF_HOME="${WORK}/hf"
 export HF_TOKEN="$(cat "$HOME/.cache/huggingface/token")"
 export VLLM_USE_FLASHINFER_SAMPLER=0
+# Compile and kernel caches live on the node, not in the NFS home (concurrent jobs corrupt shared caches).
+export VLLM_CACHE_ROOT="${WORK}/vllm"
+export TORCHINDUCTOR_CACHE_DIR="${WORK}/inductor"
+export TRITON_CACHE_DIR="${WORK}/triton"
+export XDG_CACHE_HOME="${WORK}/xdg"
 mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
