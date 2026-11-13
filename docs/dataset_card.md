@@ -12,7 +12,7 @@ tags:
 # llms-xx-to-en-translation
 
 Open models translating GeoReSeT corpus languages into English.
-[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 17:37 CET
+[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 18:20 CET
 
 ## Progress
 
@@ -21,20 +21,20 @@ Open models translating GeoReSeT corpus languages into English.
 | gemma-3-27b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | gemma-4-26b-a4b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | gemma-4-31b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| gemma-4-e4b-it | █████░ 10/11 | ███░░░ 5/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| gemma-4-e4b-it | ██████ 11/11 | ██████ 10/10 | ██████ 1/1 | ██████ 1/1 | ███░░░ 4/8 |
 | hy-mt2-30b-a3b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| hy-mt2-7b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| hy-mt2-7b | ██████ 11/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | lfm3-1.7b | — | — | — | — | — |
 | madlad400-10b-mt | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| madlad400-3b-mt | █████░ 9/11 | █░░░░░ 2/10 | ██████ 1/1 | ██████ 1/1 | ███░░░ 4/8 |
+| madlad400-3b-mt | ██████ 11/11 | █░░░░░ 2/10 | ██████ 1/1 | ██████ 1/1 | ███░░░ 4/8 |
 | nllb-200-3.3b | █░░░░░ 1/11 | ░░░░░░ 0/10 | ██████ 1/1 | ██████ 1/1 | ░░░░░░ 0/8 |
 | plamo-3-translate-2b | ████░░ 7/11 | ██░░░░ 3/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ███░░░ 4/8 |
 | plamo-3-translate-8b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | qwen3.8-27b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| tiny-aya-global | ██████ 11/11 | █████░ 8/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | █░░░░░ 1/8 |
+| tiny-aya-global | ██████ 11/11 | ██████ 10/10 | ██████ 1/1 | ██████ 1/1 | ██████ 8/8 |
 | translategemma-12b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | translategemma-27b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| translategemma-4b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| translategemma-4b-it | █░░░░░ 1/11 | █░░░░░ 1/10 | ██████ 1/1 | ██████ 1/1 | ░░░░░░ 0/8 |
 
 Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
@@ -44,9 +44,11 @@ Overall chrF++ uses the 0 languages every scored model covers.
 
 | Model | chrF++ ↑ | Volume-weighted chrF++ ↑ | COMET-22 ↑ | MetricX-24 ↓ | Failures | Segments |
 |---|---:|---:|---:|---:|---:|---:|
-| madlad400-3b-mt | 58.8 | 0.0 | 0.855 | 3.74 | 3.9% | 88,840 |
-| nllb-200-3.3b | 44.7 | 0.0 | 0.710 | 5.25 | 21.9% | 8,323 |
-| tiny-aya-global | 51.1 | 0.0 | 0.821 | 5.45 | 1.6% | 15,976 |
+| gemma-4-e4b-it | 56.5 | 0.0 | 0.851 | 4.12 | 1.0% | 24,072 |
+| madlad400-3b-mt | 58.2 | 0.0 | 0.854 | 3.75 | 4.4% | 101,996 |
+| nllb-200-3.3b | 43.6 | 0.0 | 0.711 | 5.40 | 28.9% | 19,299 |
+| tiny-aya-global | 55.7 | 0.0 | 0.840 | 4.51 | 8.5% | 327,389 |
+| translategemma-4b-it | 51.2 | 0.0 | 0.833 | 2.94 | 28.1% | 19,299 |
 
 <details><summary>Best model per language</summary>
 
@@ -56,10 +58,10 @@ Overall chrF++ uses the 0 languages every scored model covers.
 | als_Latn | madlad400-3b-mt | 63.5 |
 | amh_Ethi | madlad400-3b-mt | 50.0 |
 | arb_Arab | madlad400-3b-mt | 60.1 |
-| azj_Latn | tiny-aya-global | 43.9 |
-| bel_Cyrl | tiny-aya-global | 49.8 |
-| ben_Beng | madlad400-3b-mt | 57.1 |
-| bul_Cyrl | madlad400-3b-mt | 61.3 |
+| azj_Latn | gemma-4-e4b-it | 49.2 |
+| bel_Cyrl | tiny-aya-global | 52.4 |
+| ben_Beng | tiny-aya-global | 58.6 |
+| bul_Cyrl | tiny-aya-global | 65.3 |
 | cat_Latn | madlad400-3b-mt | 69.2 |
 | ceb_Latn | madlad400-3b-mt | 50.4 |
 | ces_Latn | nllb-200-3.3b | 65.6 |
@@ -69,7 +71,7 @@ Overall chrF++ uses the 0 languages every scored model covers.
 | dan_Latn | madlad400-3b-mt | 70.3 |
 | deu_Latn | madlad400-3b-mt | 67.4 |
 | ekk_Latn | madlad400-3b-mt | 62.0 |
-| ell_Grek | madlad400-3b-mt | 61.1 |
+| ell_Grek | tiny-aya-global | 74.1 |
 | epo_Latn | madlad400-3b-mt | 65.4 |
 | eus_Latn | madlad400-3b-mt | 54.3 |
 | fas_Arab | madlad400-3b-mt | 60.1 |
@@ -88,7 +90,7 @@ Overall chrF++ uses the 0 languages every scored model covers.
 | ind_Latn | madlad400-3b-mt | 65.4 |
 | isl_Latn | madlad400-3b-mt | 58.3 |
 | ita_Latn | madlad400-3b-mt | 60.8 |
-| jav_Latn | madlad400-3b-mt | 42.7 |
+| jav_Latn | tiny-aya-global | 54.0 |
 | jpn_Jpan | madlad400-3b-mt | 54.2 |
 | kan_Knda | madlad400-3b-mt | 56.3 |
 | kat_Geor | madlad400-3b-mt | 38.9 |
@@ -124,6 +126,19 @@ Overall chrF++ uses the 0 languages every scored model covers.
 | swe_Latn | madlad400-3b-mt | 69.4 |
 | tam_Taml | madlad400-3b-mt | 53.7 |
 | tel_Telu | madlad400-3b-mt | 60.2 |
+| tgk_Cyrl | madlad400-3b-mt | 32.8 |
+| tha_Thai | madlad400-3b-mt | 56.3 |
+| tur_Latn | madlad400-3b-mt | 62.4 |
+| ukr_Cyrl | madlad400-3b-mt | 64.4 |
+| urd_Arab | madlad400-3b-mt | 57.1 |
+| uzn_Latn | madlad400-3b-mt | 55.7 |
+| vie_Latn | madlad400-3b-mt | 60.6 |
+| xho_Latn | madlad400-3b-mt | 52.4 |
+| ydd_Hebr | madlad400-3b-mt | 51.2 |
+| yor_Latn | tiny-aya-global | 36.2 |
+| yue_Hani | madlad400-3b-mt | 53.8 |
+| zsm_Latn | madlad400-3b-mt | 65.7 |
+| zul_Latn | madlad400-3b-mt | 54.3 |
 
 </details>
 
