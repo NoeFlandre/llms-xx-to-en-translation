@@ -10,6 +10,7 @@ prompt: plamo3_translate      # verify official prompt in the model card
 thinking: not_applicable
 dtype: bfloat16
 tensor_parallel: 1
-gpu_memory_gb_min: 16
+gpu_memory_gb_min: 12
 trust_remote_code: true
 official_languages: [arb_Arab, azj_Latn, bel_Cyrl, ben_Beng, bul_Cyrl, cat_Latn, ceb_Latn, cmn_Hani, deu_Latn, ekk_Latn, eus_Latn, fas_Arab, fra_Latn, guj_Gujr, heb_Hebr, hin_Deva, hun_Latn, hye_Armn, ind_Latn, ita_Latn, jav_Latn, jpn_Jpan, kat_Geor, kaz_Cyrl, khm_Khmr, kor_Hang, lit_Latn, lvs_Latn, mal_Mlym, mar_Deva, mya_Mymr, nld_Latn, npi_Deva, pan_Guru, pol_Latn, rus_Cyrl, sin_Sinh, slk_Latn, slv_Latn, spa_Latn, srp_Cyrl, tam_Taml, tel_Telu, tha_Thai, urd_Arab, uzn_Latn, vie_Latn, zsm_Latn]
+fp16_ok: true
