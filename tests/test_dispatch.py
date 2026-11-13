@@ -4,7 +4,6 @@ import pytest
 
 from xx_to_en.dispatch import (
     MAX_JOBS_PER_SITE,
-    MAX_JOBS_TOTAL,
     GpuPool,
     Pending,
     choose_placements,
@@ -56,7 +55,7 @@ def test_per_site_and_total_caps_apply():
     pools = [_pool("nancy", "gres", 48, 20), _pool("sophia", "musa", 96, 20)]
     pending = [Pending(f"m{i}", 8) for i in range(30)]
     placements = _place(pending, pools)
-    assert len(placements) == MAX_JOBS_TOTAL
+    assert len(placements) == 2 * MAX_JOBS_PER_SITE
     assert all(sum(p.site == site for p in placements) <= MAX_JOBS_PER_SITE for site in ("nancy", "sophia"))
 
 

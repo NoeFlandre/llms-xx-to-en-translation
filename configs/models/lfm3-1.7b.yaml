@@ -12,5 +12,5 @@ dtype: bfloat16
 tensor_parallel: 1
 gpu_memory_gb_min: 8
 trust_remote_code: true
-official_languages: [arb_Arab, cmn_Hani, deu_Latn, fra_Latn, hin_Deva, ind_Latn, ita_Latn, jpn_Jpan, kor_Hang, pol_Latn, por_Latn, rus_Cyrl, spa_Latn, tha_Thai, vie_Latn]
+official_languages: pending  # blocked: vLLM 0.33 cannot run LFM3 (its conv layers are unsupported)
 fp16_ok: true

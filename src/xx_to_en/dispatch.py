@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 JOB_MINUTES = 60
-MAX_JOBS_PER_SITE = 6
-MAX_JOBS_TOTAL = 12
+MAX_JOBS_PER_SITE = 8
+MAX_JOBS_TOTAL = 20
 BOUNDARY_HOURS = (9, 19)
 
 
