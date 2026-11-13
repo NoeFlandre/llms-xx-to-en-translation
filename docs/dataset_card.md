@@ -12,7 +12,7 @@ tags:
 # llms-xx-to-en-translation
 
 Open models translating GeoReSeT corpus languages into English.
-[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 13:56 CET
+[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 14:01 CET
 
 ## Progress
 
@@ -26,12 +26,12 @@ Open models translating GeoReSeT corpus languages into English.
 | hy-mt2-7b | ░░░░░░ 0/5 | ░░░░░░ 0/4 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/4 |
 | lfm3-1.7b | — | — | — | — | — |
 | madlad400-10b-mt | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| madlad400-3b-mt | █░░░░░ 2/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| nllb-200-3.3b | ██░░░░ 3/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| madlad400-3b-mt | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| nllb-200-3.3b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | plamo-3-translate-2b | ░░░░░░ 0/6 | ░░░░░░ 0/6 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/5 |
 | plamo-3-translate-8b | ░░░░░░ 0/6 | ░░░░░░ 0/6 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/5 |
 | qwen3.8-27b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| tiny-aya-global | ██░░░░ 3/8 | ░░░░░░ 0/8 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/6 |
+| tiny-aya-global | ░░░░░░ 0/8 | ░░░░░░ 0/8 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/6 |
 | translategemma-12b-it | ░░░░░░ 0/6 | ░░░░░░ 0/6 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/5 |
 | translategemma-27b-it | ░░░░░░ 0/6 | ░░░░░░ 0/6 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/5 |
 | translategemma-4b-it | ░░░░░░ 0/6 | ░░░░░░ 0/6 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/5 |
@@ -48,6 +48,9 @@ _No scores yet. Hypotheses are generated first; scores follow on bf16 GPUs._
 
 - `results/<model>/<benchmark>/<shard>.parquet`: hypotheses and token counts
 - `scores/<model>/<benchmark>/<shard>.parquet`: per-segment scores and failure flags
+- `manifests/<model>/job-<id>.json`: full model config and run settings for each job
+
+Each row carries its own provenance: `model_revision`, `prompt_template`, `prompt_version`, `prompt_sha256`, `decoding`, `seed`, `budget_*`, `max_new_tokens`, `dtype`, `backend`, `software`, `gpu`, `node`, `job_id`, `code_commit`, `generated_at`. Generated text is in `hypothesis`; the untouched model output is in `raw_hypothesis`, with `finish_reason` and `truncated`.
 
 Source and reference text are not copied: join on `(benchmark, bench_lang, segment_id)`
 with the public benchmark.
