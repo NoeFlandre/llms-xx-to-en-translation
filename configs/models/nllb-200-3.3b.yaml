@@ -12,4 +12,4 @@ dtype: float16
 tensor_parallel: 1
 gpu_memory_gb_min: 24
 trust_remote_code: false
-official_languages: pending   # NLLB-200 language list (FLORES-200 codes)
+official_languages: [afr_Latn, als_Latn, amh_Ethi, arb_Arab, azj_Latn, bel_Cyrl, ben_Beng, bul_Cyrl, cat_Latn, ceb_Latn, ces_Latn, ckb_Arab, cym_Latn, dan_Latn, deu_Latn, ell_Grek, epo_Latn, eus_Latn, fin_Latn, fra_Latn, gla_Latn, gle_Latn, glg_Latn, guj_Gujr, hau_Latn, heb_Hebr, hin_Deva, hun_Latn, hye_Armn, ibo_Latn, ind_Latn, isl_Latn, ita_Latn, jav_Latn, jpn_Jpan, kan_Knda, kat_Geor, kaz_Cyrl, khk_Cyrl, khm_Khmr, kir_Cyrl, kmr_Latn, kor_Hang, lit_Latn, lvs_Latn, mal_Mlym, mar_Deva, mkd_Cyrl, mlt_Latn, mya_Mymr, nld_Latn, nno_Latn, nob_Latn, npi_Deva, pan_Guru, pbt_Arab, plt_Latn, pol_Latn, por_Latn, ron_Latn, rus_Cyrl, sin_Sinh, slk_Latn, slv_Latn, spa_Latn, srp_Cyrl, swe_Latn, tam_Taml, tel_Telu, tgk_Cyrl, tha_Thai, tur_Latn, ukr_Cyrl, urd_Arab, uzn_Latn, vie_Latn, xho_Latn, ydd_Hebr, yor_Latn, zsm_Latn, zul_Latn]

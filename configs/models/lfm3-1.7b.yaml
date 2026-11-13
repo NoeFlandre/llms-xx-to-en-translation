@@ -6,10 +6,10 @@ active_params_b: 1.7
 license: other                # LFM license; read it before publishing outputs
 access: open
 backend: vllm
-prompt: lfm_chat
+prompt: generic_chat
 thinking: "off"                 # verify
 dtype: bfloat16
 tensor_parallel: 1
 gpu_memory_gb_min: 8
 trust_remote_code: false
-official_languages: pending
+official_languages: [arb_Arab, cmn_Hani, deu_Latn, fra_Latn, hin_Deva, ind_Latn, ita_Latn, jpn_Jpan, kor_Hang, pol_Latn, por_Latn, rus_Cyrl, spa_Latn, tha_Thai, vie_Latn]

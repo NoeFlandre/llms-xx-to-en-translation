@@ -1,95 +1,241 @@
 # Corpus language config -> code used by each benchmark.
 # Missing benchmark key = same code is used (identity), e.g. fra_Latn -> fra_Latn.
 # Empty string = no equivalent variant in that benchmark (script or dialect mismatch).
+afr_Latn:
+  iso639_1: af
+als_Latn:
+  iso639_1: sq
+  ntrex_128: sqi_Latn
+  tatoeba_xen: sqi
+amh_Ethi:
+  iso639_1: am
+arb_Arab:
+  iso639_1: ar
+arb_Latn:
+  flores_plus_devtest: ''
+azj_Latn:
+  iso639_1: az
+  ntrex_128: aze_Latn
+  tatoeba_xen: aze
+bel_Cyrl:
+  iso639_1: be
+ben_Beng:
+  iso639_1: bn
+ben_Latn:
+  flores_plus_devtest: ''
+  ntrex_128: ''
+  tatoeba_xen: ''
+bul_Cyrl:
+  iso639_1: bg
+cat_Latn:
+  iso639_1: ca
+ces_Latn:
+  iso639_1: cs
+  wmt22_xen: cs
+  wmt23_xen: cs
 cmn_Hani:
   flores_plus_devtest: cmn_Hans
+  iso639_1: zh
   ntrex_128: zho_Hans
+  tatoeba_xen: zho
   wmt22_xen: zh
   wmt23_xen: zh
-  tatoeba_xen: zho
+cym_Latn:
+  iso639_1: cy
+dan_Latn:
+  iso639_1: da
+deu_Latn:
+  iso639_1: de
+  wmt22_xen: de
+  wmt23_xen: de
+ekk_Latn:
+  iso639_1: et
+  ntrex_128: est_Latn
+  tatoeba_xen: est
+ell_Grek:
+  iso639_1: el
+epo_Latn:
+  iso639_1: eo
+  tatoeba_xen: epo
+eus_Latn:
+  iso639_1: eu
+fas_Arab:
+  flores_plus_devtest: pes_Arab
+  iso639_1: fa
+fin_Latn:
+  iso639_1: fi
+fra_Latn:
+  iso639_1: fr
+fry_Latn:
+  iso639_1: fy
+gla_Latn:
+  iso639_1: gd
+gle_Latn:
+  iso639_1: ga
+glg_Latn:
+  iso639_1: gl
+guj_Gujr:
+  iso639_1: gu
+hau_Latn:
+  iso639_1: ha
+heb_Hebr:
+  iso639_1: he
+  wmt23_xen: he
+hin_Deva:
+  iso639_1: hi
+hun_Latn:
+  iso639_1: hu
+hye_Armn:
+  iso639_1: hy
+ibo_Latn:
+  iso639_1: ig
+ind_Latn:
+  iso639_1: id
+isl_Latn:
+  iso639_1: is
+  wmt22_xen: is
+  wmt23_xen: is
+ita_Latn:
+  iso639_1: it
+jav_Latn:
+  iso639_1: jv
+jpn_Jpan:
+  iso639_1: ja
+  wmt23_xen: ja
+kan_Knda:
+  iso639_1: kn
+kan_Latn:
+  flores_plus_devtest: ''
+  ntrex_128: ''
+  tatoeba_xen: ''
+kat_Geor:
+  iso639_1: ka
+kaz_Cyrl:
+  iso639_1: kk
+khk_Cyrl:
+  iso639_1: mn
+  ntrex_128: ''
+  tatoeba_xen: mon
+khm_Khmr:
+  iso639_1: km
+kir_Cyrl:
+  iso639_1: ky
+kmr_Latn:
+  iso639_1: ku
+kor_Hang:
+  iso639_1: ko
+lat_Latn:
+  flores_plus_devtest: ''
+  iso639_1: la
+  ntrex_128: ''
+  tatoeba_xen: lat
+lit_Latn:
+  iso639_1: lt
+lvs_Latn:
+  iso639_1: lv
+  ntrex_128: lav_Latn
+  tatoeba_xen: lav
+mal_Mlym:
+  iso639_1: ml
+mar_Deva:
+  iso639_1: mr
+mar_Latn:
+  flores_plus_devtest: ''
+  ntrex_128: ''
+  tatoeba_xen: ''
+mkd_Cyrl:
+  iso639_1: mk
+mlt_Latn:
+  iso639_1: mt
+mya_Mymr:
+  iso639_1: my
+nld_Latn:
+  iso639_1: nl
+nno_Latn:
+  iso639_1: nn
+nob_Latn:
+  iso639_1: 'no'
+npi_Deva:
+  iso639_1: ne
+  ntrex_128: nep_Deva
+  tatoeba_xen: nep
+pan_Guru:
+  iso639_1: pa
+pbt_Arab:
+  iso639_1: ps
+  ntrex_128: pus_Arab
+  tatoeba_xen: pus
+plt_Latn:
+  iso639_1: mg
+  ntrex_128: mlg_Latn
+  tatoeba_xen: mlg
+pol_Latn:
+  iso639_1: pl
+por_Latn:
+  iso639_1: pt
+ron_Latn:
+  iso639_1: ro
+rus_Cyrl:
+  iso639_1: ru
+  wmt22_xen: ru
+  wmt23_xen: ru
+sin_Sinh:
+  iso639_1: si
+slk_Latn:
+  iso639_1: sk
+slv_Latn:
+  iso639_1: sl
+spa_Latn:
+  iso639_1: es
+srp_Cyrl:
+  iso639_1: sr
+srp_Latn:
+  flores_plus_devtest: ''
+  tatoeba_xen: ''
+swe_Latn:
+  iso639_1: sv
+tam_Taml:
+  iso639_1: ta
+tel_Latn:
+  flores_plus_devtest: ''
+  ntrex_128: ''
+  tatoeba_xen: ''
+tel_Telu:
+  iso639_1: te
+tgk_Cyrl:
+  iso639_1: tg
+tha_Thai:
+  iso639_1: th
+tur_Latn:
+  iso639_1: tr
+ukr_Cyrl:
+  iso639_1: uk
+  wmt23_xen: uk
+urd_Arab:
+  iso639_1: ur
+uzn_Cyrl:
+  flores_plus_devtest: ''
+  ntrex_128: ''
+  tatoeba_xen: ''
+uzn_Latn:
+  iso639_1: uz
+  ntrex_128: uzb_Latn
+  tatoeba_xen: uzb
+vie_Latn:
+  iso639_1: vi
+xho_Latn:
+  iso639_1: xh
+ydd_Hebr:
+  iso639_1: yi
+  tatoeba_xen: yid
+yor_Latn:
+  iso639_1: yo
 yue_Hani:
   flores_plus_devtest: yue_Hant
   ntrex_128: yue_Hant
-fas_Arab:
-  flores_plus_devtest: pes_Arab
-azj_Latn:
-  ntrex_128: aze_Latn
-  tatoeba_xen: aze
-ekk_Latn:
-  ntrex_128: est_Latn
-  tatoeba_xen: est
-npi_Deva:
-  ntrex_128: nep_Deva
-  tatoeba_xen: nep
-lvs_Latn:
-  ntrex_128: lav_Latn
-  tatoeba_xen: lav
-plt_Latn:
-  ntrex_128: mlg_Latn
-  tatoeba_xen: mlg
-pbt_Arab:
-  ntrex_128: pus_Arab
-  tatoeba_xen: pus
-als_Latn:
-  ntrex_128: sqi_Latn
-  tatoeba_xen: sqi
 zsm_Latn:
+  iso639_1: ms
   ntrex_128: msa_Latn
   tatoeba_xen: msa
-uzn_Latn:
-  ntrex_128: uzb_Latn
-  tatoeba_xen: uzb
-khk_Cyrl:
-  ntrex_128: ""
-  tatoeba_xen: mon
-uzn_Cyrl:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: ""
-srp_Latn:
-  flores_plus_devtest: ""
-  tatoeba_xen: ""
-ben_Latn:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: ""
-kan_Latn:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: ""
-mar_Latn:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: ""
-tel_Latn:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: ""
-arb_Latn:
-  flores_plus_devtest: ""
-lat_Latn:
-  flores_plus_devtest: ""
-  ntrex_128: ""
-  tatoeba_xen: lat
-epo_Latn:
-  tatoeba_xen: epo
-ydd_Hebr:
-  tatoeba_xen: yid
-ces_Latn:
-  wmt22_xen: cs
-  wmt23_xen: cs
-deu_Latn:
-  wmt22_xen: de
-  wmt23_xen: de
-isl_Latn:
-  wmt22_xen: is
-  wmt23_xen: is
-rus_Cyrl:
-  wmt22_xen: ru
-  wmt23_xen: ru
-jpn_Jpan:
-  wmt23_xen: ja
-ukr_Cyrl:
-  wmt23_xen: uk
-heb_Hebr:
-  wmt23_xen: he
+zul_Latn:
+  iso639_1: zu

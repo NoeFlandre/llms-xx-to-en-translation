@@ -39,3 +39,7 @@ class LanguageMap:
         if benchmark.startswith("tatoeba"):
             return corpus_code.split("_", 1)[0]
         return corpus_code
+
+    def iso639_1(self, corpus_code: str) -> str | None:
+        """ISO 639-1 code for a corpus language, or None when the language has none."""
+        return self._mapping.get(corpus_code, {}).get("iso639_1") or None

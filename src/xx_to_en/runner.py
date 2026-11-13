@@ -21,7 +21,7 @@ from xx_to_en.failures import detect
 from xx_to_en.inventory import Inventory
 from xx_to_en.languages import LanguageMap
 from xx_to_en.lengths import max_new_tokens
-from xx_to_en.prompts import PROMPT_VERSION, make_prompt
+from xx_to_en.prompts import PROMPT_VERSION, IsoLookup, make_prompt
 
 
 @dataclass(frozen=True)
@@ -102,6 +102,7 @@ def translate(
     backend: Backend,
     cache: OutputCache,
     decoding: Decoding = Decoding(),
+    iso: IsoLookup | None = None,
 ) -> list[Translation]:
     """Translate segments, reusing cached outputs and generating the rest in one batch."""
     plan = []
@@ -110,7 +111,7 @@ def translate(
         key = _cache_key(model, model.prompt, decoding, segment, budget)
         plan.append((segment, budget, key, cache.get(key)))
     pending = [(segment, budget, key) for segment, budget, key, hit in plan if hit is None]
-    generated = _generate(pending, model, backend)
+    generated = _generate(pending, model, backend, iso)
     results = []
     for segment, _, key, hit in plan:
         if hit is not None:
@@ -123,11 +124,14 @@ def translate(
 
 
 def _generate(
-    pending: Sequence[tuple[Segment, int, str]], model: ModelConfig, backend: Backend
+    pending: Sequence[tuple[Segment, int, str]],
+    model: ModelConfig,
+    backend: Backend,
+    iso: IsoLookup | None,
 ) -> dict[str, tuple[str, int]]:
     if not pending:
         return {}
-    inputs = [make_prompt(model.prompt, segment, backend) for segment, _, _ in pending]
+    inputs = [make_prompt(model.prompt, segment, backend, iso) for segment, _, _ in pending]
     budgets = [budget for _, budget, _ in pending]
     outputs = backend.generate(inputs, budgets)
     return {
@@ -182,10 +186,11 @@ def run_work_item(
     cache: OutputCache,
     out_dir: Path,
     decoding: Decoding = Decoding(),
+    iso: IsoLookup | None = None,
 ) -> dict[str, object]:
     """Translate one benchmark x language pair, write its JSONL, and return a summary record."""
     started = time.perf_counter()
-    translations = translate(segments, model=model, backend=backend, cache=cache, decoding=decoding)
+    translations = translate(segments, model=model, backend=backend, cache=cache, decoding=decoding, iso=iso)
     elapsed = time.perf_counter() - started
     path = out_dir / model.name / item.benchmark / f"{item.corpus_lang}.jsonl"
     write_jsonl(path, translations)

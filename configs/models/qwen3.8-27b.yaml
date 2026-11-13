@@ -6,7 +6,7 @@ active_params_b: 27.8
 license: apache-2.0
 access: open
 backend: vllm
-prompt: qwen_chat
+prompt: generic_chat
 thinking: "off"                 # enable_thinking=false in the chat template
 dtype: bfloat16
 tensor_parallel: 1

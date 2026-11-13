@@ -6,10 +6,10 @@ active_params_b: 3.35
 license: cc-by-nc-4.0
 access: accepted              # gated repo; access confirmed for this account
 backend: vllm
-prompt: tiny_aya_chat         # verify official prompt in the model card
+prompt: generic_chat         # verify official prompt in the model card
 thinking: "off"                 # verify
 dtype: bfloat16
 tensor_parallel: 1
 gpu_memory_gb_min: 16
 trust_remote_code: false
-official_languages: pending
+official_languages: [amh_Ethi, arb_Arab, ben_Beng, bul_Cyrl, cat_Latn, ces_Latn, cmn_Hani, cym_Latn, dan_Latn, deu_Latn, ekk_Latn, ell_Grek, eus_Latn, fas_Arab, fin_Latn, fra_Latn, gle_Latn, glg_Latn, guj_Gujr, hau_Latn, heb_Hebr, hin_Deva, hun_Latn, ibo_Latn, ind_Latn, ita_Latn, jav_Latn, jpn_Jpan, khm_Khmr, kor_Hang, lit_Latn, lvs_Latn, mar_Deva, mlt_Latn, mya_Mymr, nld_Latn, nob_Latn, npi_Deva, pan_Guru, plt_Latn, pol_Latn, por_Latn, ron_Latn, rus_Cyrl, slk_Latn, slv_Latn, spa_Latn, srp_Cyrl, swe_Latn, tam_Taml, tel_Telu, tha_Thai, tur_Latn, ukr_Cyrl, urd_Arab, vie_Latn, xho_Latn, yor_Latn, zsm_Latn, zul_Latn]

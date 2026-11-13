@@ -92,7 +92,8 @@ def make_backend(model: ModelConfig, kind: str, *, seed: int) -> Any:
     if kind == "transformers":
         from xx_to_en.backends import TransformersBackend
 
-        return TransformersBackend(model, seed=seed)
+        # NLLB needs its target language forced; MADLAD takes the target from a text prefix instead.
+        return TransformersBackend(model, seed=seed, force_target_lang=model.family == "nllb")
     raise SystemExit(f"unknown backend {kind!r}")
 
 
@@ -122,7 +123,14 @@ def run_command(project: Project, args: argparse.Namespace) -> str:
         if args.limit:
             segments = segments[: args.limit]
         summary = run_work_item(
-            item, segments, model=model, backend=backend, cache=cache, out_dir=out_dir, decoding=decoding
+            item,
+            segments,
+            model=model,
+            backend=backend,
+            cache=cache,
+            out_dir=out_dir,
+            decoding=decoding,
+            iso=project.language_map.iso639_1,
         )
         lines.append(json.dumps(summary, ensure_ascii=False))
         print(lines[-1], flush=True)
