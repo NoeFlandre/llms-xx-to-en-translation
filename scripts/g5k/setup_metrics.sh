@@ -16,13 +16,14 @@ if [ ! -x "$VENV/bin/python" ]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --quiet --upgrade pip
+# MetricX's requirements.txt pins transformers 4.30.2 and sentencepiece 0.1.99, which conflict with
+# COMET 2.2.7. The resolver's versions are used instead; the smoke scoring run verifies MetricX.
 "$VENV/bin/pip" install --quiet \
   "unbabel-comet==2.2.7" \
   "fasttext-turbo==0.1.1" \
-  "huggingface_hub" \
-  "transformers==4.30.2" \
-  "sentencepiece==0.1.99" \
-  "datasets==2.13.1"
+  huggingface_hub \
+  datasets \
+  sentencepiece
 "$VENV/bin/pip" install --quiet -e "$SRC"
 "$VENV/bin/pip" freeze > "$VENV/freeze.txt"
 echo "installed: $(wc -l < "$VENV/freeze.txt") packages; freeze at $VENV/freeze.txt"
