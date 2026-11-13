@@ -137,6 +137,12 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
     return out
 
 
+def waiting_orphans(site: str, tracked: set[tuple[str, int]]) -> list[int]:
+    """Waiting xx2en jobs on a site that the dispatcher does not track; they would never be cancelled."""
+    out = ssh(site, "oarstat -u nflandre 2>/dev/null | grep xx2en | awk '{ if ($(NF-1)==\"W\") print $1 }'")
+    return [int(x) for x in out.split() if x.isdigit() and (site, int(x)) not in tracked]
+
+
 def site_ready(site: str) -> bool:
     """A site takes jobs only once its generation environment exists."""
     return "ready" in ssh(site, "test -x $HOME/venvs/xx2en/bin/xx2en && echo ready")
@@ -215,6 +221,11 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
         return
     pending = pending_work(project, repo_files(REPO))
     refresh_jobs(state, time.time(), {key: info[1] for key, info in pending.items()})
+    tracked = {(job["site"], job["id"]) for job in state["jobs"]}
+    for entry in {entry["site"] for entry in pools_config}:
+        for job_id in waiting_orphans(entry, tracked):
+            cancel(entry, job_id)
+            print(f"  cancelled untracked waiting job {job_id} on {entry}", flush=True)
     no_progress = state.get("no_progress", {})
     ready = sorted(
         (info[2], key, info[0], info[3])
