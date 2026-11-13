@@ -94,6 +94,7 @@ class Scorers:
                 output = model(
                     input_ids=torch.tensor(ids, device=device),
                     attention_mask=torch.tensor(masks, device=device),
+                    use_cache=False,  # the decoder cache breaks this upstream model on transformers 4.57
                 )
                 for index, value in zip(chunk, output.predictions.float().cpu().tolist(), strict=True):
                     scores[index] = float(value)
