@@ -1,13 +1,8 @@
-# GPU clusters the default queue has accepted for this account (verified by submission or free-GPU probe).
+# GPU clusters the default queue accepts for this account, probed with 1-minute test submissions.
+# Clusters that answer "You can only access the required resources in besteffort" are left out.
 # cluster and gpu_model must match the oarnodes properties; memory_gb is the per-GPU memory.
 sites:
   - {site: nancy, cluster: granite, gpu_model: "RTX PRO 6000 Blackwell Server Edition", memory_gb: 96}
   - {site: nancy, cluster: gres, gpu_model: "L40S", memory_gb: 48}
   - {site: nancy, cluster: gruss, gpu_model: "A40", memory_gb: 48}
-  - {site: rennes, cluster: abacus27, gpu_model: "H100 NVL", memory_gb: 96}
-  - {site: rennes, cluster: abacus26, gpu_model: "L40S", memory_gb: 48}
-  - {site: rennes, cluster: abacus29, gpu_model: "L40S", memory_gb: 48}
   - {site: sophia, cluster: musa, gpu_model: "H100 NVL", memory_gb: 96}
-  - {site: sophia, cluster: esterel33, gpu_model: "A40", memory_gb: 48}
-  - {site: grenoble, cluster: vercors8, gpu_model: "Quadro RTX 8000", memory_gb: 48}
-  - {site: grenoble, cluster: vercors7, gpu_model: "TITAN RTX", memory_gb: 24}
