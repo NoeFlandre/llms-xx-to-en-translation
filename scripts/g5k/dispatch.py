@@ -153,7 +153,14 @@ def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> li
         cluster_key = f"{entry['site']}/{entry['cluster']}"
         if entry["site"] not in ready or state["failures"].get(cluster_key, 0) >= MAX_FAILURES_PER_CLUSTER:
             continue
-        free = counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"]
+        waiting = sum(
+            1
+            for job in state["jobs"]
+            if job["site"] == entry["site"]
+            and job["cluster"] == entry["cluster"]
+            and job["state"] == "Waiting"
+        )
+        free = max(0, counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"] - waiting)
         pools.append(
             GpuPool(entry["site"], entry["cluster"], entry["memory_gb"], free, bool(entry.get("bf16", True)))
         )
