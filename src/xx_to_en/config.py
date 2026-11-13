@@ -28,7 +28,7 @@ class ModelConfig(BaseModel):
     tensor_parallel: int = Field(ge=1)
     gpu_memory_gb_min: int = Field(gt=0)
     trust_remote_code: bool
-    official_languages: list[str] | Literal["pending"]
+    official_languages: list[str] | Literal["pending", "all"]
 
 
 class BenchmarkConfig(BaseModel):

@@ -59,6 +59,8 @@ class Project:
             raise SystemExit(
                 f"{model.name}: official_languages is pending; fill it from the model card first"
             )
+        if model.official_languages == "all":
+            return frozenset(corpus_languages(self.inventory.corpus_rows))
         return frozenset(model.official_languages)
 
     def plan(self, model: ModelConfig, benchmarks: list[str] | None = None) -> list[WorkItem]:

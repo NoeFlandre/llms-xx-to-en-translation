@@ -12,4 +12,4 @@ dtype: bfloat16
 tensor_parallel: 1
 gpu_memory_gb_min: 24
 trust_remote_code: false
-official_languages: pending   # fill from the model card before running
+official_languages: all  # card claims 140+ languages but names no list; run on every corpus language the benchmark covers
