@@ -16,9 +16,11 @@ if [ ! -x "$VENV/bin/python" ]; then
   python3 -m venv "$VENV"
 fi
 "$VENV/bin/pip" install --quiet --upgrade pip
+# Constraint applies to build-isolated sdist builds too: some sdists import pkg_resources at build time.
+printf 'setuptools<80\npyarrow>=14,<17\n' > "$VENV/constraints.txt"
 # MetricX's requirements.txt pins transformers 4.30.2 and sentencepiece 0.1.99, which conflict with
 # COMET 2.2.7. The resolver's versions are used instead; the smoke scoring run verifies MetricX.
-"$VENV/bin/pip" install --quiet \
+"$VENV/bin/pip" install --quiet -c "$VENV/constraints.txt" \
   "unbabel-comet==2.2.7" \
   "fasttext-turbo==0.1.1" \
   huggingface_hub \
