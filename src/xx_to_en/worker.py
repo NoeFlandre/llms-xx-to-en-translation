@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from xx_to_en.benchmarks import Segment
 from xx_to_en.cache import OutputCache
@@ -21,6 +21,9 @@ from xx_to_en.languages import LanguageMap
 from xx_to_en.plan import Shard
 from xx_to_en.runner import Decoding, Translation, translate
 from xx_to_en.sources import load_segments
+
+if TYPE_CHECKING:
+    from xx_to_en.metric_runtime import Scorers
 
 PRIVATE_FIELDS = frozenset({"source", "reference"})
 SegmentKey = tuple[str, str, str]
@@ -33,11 +36,11 @@ def may_start_next(elapsed_s: float, last_shard_s: float | None, budget_s: float
     return elapsed_s + last_shard_s <= budget_s
 
 
-def run_generation(
+def run_budgeted(
     pending: Iterable[Shard],
     *,
     budget_s: float,
-    generate: Callable[[Shard], None],
+    step: Callable[[Shard], None],
     clock: Callable[[], float] = time.monotonic,
 ) -> list[Shard]:
     """Generate shards in order while the budget can fit another one. Returns the finished shards."""
@@ -48,7 +51,7 @@ def run_generation(
         if not may_start_next(clock() - started, last, budget_s):
             break
         begin = clock()
-        generate(shard)
+        step(shard)
         last = clock() - begin
         finished.append(shard)
     return finished
@@ -137,34 +140,21 @@ def score_shard(
     shard: Shard,
     benchmarks: Mapping[str, BenchmarkConfig],
     language_map: LanguageMap,
-    metricx_repo: Path,
-    work: Path,
-    comet_batch: int,
-    metricx_batch: int,
+    scorers: Scorers,
 ) -> None:
     """Score one shard: chrF++ everywhere, COMET-22 and MetricX-24 where covered, GlotLID for every output."""
-    from xx_to_en.metric_runtime import comet_scores, glotlid_codes, metricx_scores
     from xx_to_en.metrics import segment_chrf_pp
-    from xx_to_en.scoring import (
-        comet_inputs,
-        is_neural_covered,
-        merge_scores,
-        metricx_inputs,
-        scatter,
-    )
+    from xx_to_en.scoring import comet_inputs, is_neural_covered, merge_scores, metricx_inputs, scatter
 
     rows = attach_text(
         read_records(hypothesis_file), segment_index(_all_segments(shard, benchmarks, language_map))
     )
     neural = [is_neural_covered(language_map.iso639_1(row["corpus_lang"])) for row in rows]
     covered = [row for row, flag in zip(rows, neural, strict=True) if flag]
-    comet = scatter(comet_scores(comet_inputs(covered), batch_size=comet_batch), neural)
-    metricx = scatter(
-        metricx_scores(metricx_inputs(covered), repo=metricx_repo, work=work, batch_size=metricx_batch),
-        neural,
-    )
+    comet = scatter(scorers.comet(comet_inputs(covered)), neural)
+    metricx = scatter(scorers.metricx(metricx_inputs(covered)), neural)
     chrf = segment_chrf_pp([row["hypothesis"] for row in rows], [row["reference"] for row in rows])
-    codes = glotlid_codes([row["hypothesis"] for row in rows])
+    codes = scorers.glotlid([row["hypothesis"] for row in rows])
     merged = merge_scores(rows, chrf=chrf, comet=comet, metricx=metricx, codes=codes, neural=neural)
     write_records(out_file, public_rows(merged))
 

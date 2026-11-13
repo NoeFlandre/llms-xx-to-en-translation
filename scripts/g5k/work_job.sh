@@ -30,7 +30,7 @@ nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 if [ -x "$MET/bin/xx2en" ]; then
   "$MET/bin/xx2en" score --model "$MODEL" --results-repo "$REPO" --work "$WORK" \
-    --metricx-repo "$HOME/src/metricx"
+    --metricx-repo "$HOME/src/metricx" --budget-min "${SCORE_BUDGET_MIN:-20}"
 else
   echo "metrics environment missing at $MET: scoring skipped"
 fi

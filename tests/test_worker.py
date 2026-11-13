@@ -11,7 +11,7 @@ from xx_to_en.worker import (
     hypothesis_rows,
     may_start_next,
     public_rows,
-    run_generation,
+    run_budgeted,
     segment_index,
 )
 
@@ -30,24 +30,24 @@ def test_may_start_next_reserves_room_for_the_last_shard():
     assert not may_start_next(70.0, 40.0, 100.0)
 
 
-def test_run_generation_stops_when_the_next_shard_would_overrun():
+def test_run_budgeted_stops_when_the_next_shard_would_overrun():
     clock_state = {"now": 0.0}
     calls: list[str] = []
 
-    def generate(shard: Shard) -> None:
+    def step(shard: Shard) -> None:
         calls.append(shard.shard_id)
         clock_state["now"] += 10.0  # every shard takes 10 s
 
     shards = [Shard("m", "wmt22_xen", i, ("ces_Latn",)) for i in range(5)]
-    finished = run_generation(shards, budget_s=25.0, generate=generate, clock=lambda: clock_state["now"])
+    finished = run_budgeted(shards, budget_s=25.0, step=step, clock=lambda: clock_state["now"])
     # shard 0 runs 0-10 s, shard 1 runs 10-20 s; at 20 s, 20 + 10 > 25, so shard 2 is not started
     assert [s.index for s in finished] == [0, 1]
     assert calls == ["wmt22_xen-000", "wmt22_xen-001"]
 
 
-def test_run_generation_with_no_budget_does_nothing():
+def test_run_budgeted_with_no_budget_does_nothing():
     shards = [Shard("m", "wmt22_xen", 0, ("ces_Latn",))]
-    assert run_generation(shards, budget_s=0.0, generate=lambda s: None, clock=lambda: 0.0) == []
+    assert run_budgeted(shards, budget_s=0.0, step=lambda s: None, clock=lambda: 0.0) == []
 
 
 def test_hypothesis_rows_carry_ids_and_output_but_no_text():

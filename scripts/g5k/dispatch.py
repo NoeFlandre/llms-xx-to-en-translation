@@ -22,20 +22,20 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from free_gpus import count_free
 
 from xx_to_en.cli import Project
 from xx_to_en.dispatch import GpuPool, choose_placements, crosses_boundary
+from xx_to_en.gpu_probe import count_free
 from xx_to_en.plan import build_shards
-from xx_to_en.results_store import score_path, shard_path
+from xx_to_en.results_store import repo_files, score_path, shard_path
 
 ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE = Path.home() / ".cache" / "xx2en-dispatch" / "state.json"
 REPO = "NoeFlandre/llms-xx-to-en-translation"
 SITE_USER = "nflandre"
-STALE_WAIT_S = 300
+STALE_WAIT_S = 540  # just under 10 minutes: a job that starts later loses the exemption
 POLL_S = 300
-MAX_ATTEMPTS_PER_MODEL = 12
+MAX_ATTEMPTS_PER_MODEL = 40
 MAX_FAILURES_PER_CLUSTER = 2
 REMOTE_JOB = "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 OAR_ID = re.compile(r"OAR_JOB_ID=(\d+)")
@@ -116,42 +116,29 @@ def pending_models(project: Project, done: set[str]) -> list[tuple[str, int]]:
     return [(name, need) for _, name, need in sorted(out)]
 
 
+def site_ready(site: str) -> bool:
+    """A site takes jobs only once its generation environment exists."""
+    return "ready" in ssh(site, "test -x $HOME/venvs/xx2en/bin/xx2en && echo ready")
+
+
 def usage_lines(sites: list[str]) -> list[str]:
     return [f"{site}: {ssh(site, 'usagepolicycheck 2>&1 | tail -1')}" for site in sites]
 
 
-def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str, Any], dry_run: bool) -> None:
-    from huggingface_hub import HfApi
-
-    now = datetime.now()
-    if crosses_boundary(now):
-        print(f"{now:%H:%M}: a one-hour job now would cross 09:00 or 19:00; waiting", flush=True)
-        return
-    done = set(HfApi().list_repo_files(repo_id=REPO, repo_type="dataset"))
-    refresh_jobs(state, time.time())
-    pending = [
-        (name, need)
-        for name, need in pending_models(project, done)
-        if state["attempts"].get(name, 0) < MAX_ATTEMPTS_PER_MODEL
-    ]
+def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> list[GpuPool]:
+    """Free GPUs per usable cluster, on sites that already have a generation environment."""
+    ready = {site for site in {entry["site"] for entry in pools_config} if site_ready(site)}
     pools = []
     for entry in pools_config:
-        key = f"{entry['cluster']}|{entry['gpu_model']}"
-        if state["failures"].get(f"{entry['site']}/{entry['cluster']}", 0) >= MAX_FAILURES_PER_CLUSTER:
+        cluster_key = f"{entry['site']}/{entry['cluster']}"
+        if entry["site"] not in ready or state["failures"].get(cluster_key, 0) >= MAX_FAILURES_PER_CLUSTER:
             continue
-        free = probe_free(entry["site"])[key]
+        free = probe_free(entry["site"])[f"{entry['cluster']}|{entry['gpu_model']}"]
         pools.append(GpuPool(entry["site"], entry["cluster"], entry["memory_gb"], free))
-    running_per_site = Counter(job["site"] for job in state["jobs"])
-    placements = choose_placements(
-        pending,
-        pools,
-        running_models=frozenset(job["model"] for job in state["jobs"]),
-        running_per_site=running_per_site,
-    )
-    print(
-        f"{now:%H:%M}: pending {len(pending)} models; running {len(state['jobs'])}; placements {len(placements)}",
-        flush=True,
-    )
+    return pools
+
+
+def launch(placements: list[Any], state: dict[str, Any], dry_run: bool) -> None:
     for placement in placements:
         print(f"  -> {placement.model} on {placement.site}/{placement.cluster}", flush=True)
         if dry_run:
@@ -173,8 +160,31 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
                 "state": "Waiting",
             }
         )
+
+
+def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str, Any], dry_run: bool) -> None:
+    now = datetime.now()
+    if crosses_boundary(now):
+        print(f"{now:%H:%M}: a one-hour job now would cross 09:00 or 19:00; waiting", flush=True)
+        return
+    done = repo_files(REPO)
+    refresh_jobs(state, time.time())
+    pending = [
+        (name, need)
+        for name, need in pending_models(project, done)
+        if state["attempts"].get(name, 0) < MAX_ATTEMPTS_PER_MODEL
+    ]
+    placements = choose_placements(
+        pending,
+        build_pools(pools_config, state),
+        running_models=frozenset(job["model"] for job in state["jobs"]),
+        running_per_site=Counter(job["site"] for job in state["jobs"]),
+    )
+    summary = f"pending {len(pending)} models; running {len(state['jobs'])}; placements {len(placements)}"
+    print(f"{now:%H:%M}: {summary}", flush=True)
+    launch(placements, state, dry_run)
     save_state(state)
-    for line in usage_lines(sorted({p["site"] for p in pools_config})):
+    for line in usage_lines(sorted({entry["site"] for entry in pools_config})):
         print(f"  policy {line}", flush=True)
 
 
@@ -192,16 +202,10 @@ def main(argv: list[str] | None = None) -> int:
         cycle(project, pools_config, state, args.dry_run)
         if args.dry_run:
             return 0
-        if not pending_models(project, set(_done_files())):
+        if not pending_models(project, repo_files(REPO)):
             print("all shards and scores are in the dataset", flush=True)
             return 0
         time.sleep(POLL_S)
-
-
-def _done_files() -> list[str]:
-    from huggingface_hub import HfApi
-
-    return HfApi().list_repo_files(repo_id=REPO, repo_type="dataset")
 
 
 if __name__ == "__main__":

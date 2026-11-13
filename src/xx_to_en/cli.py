@@ -144,16 +144,19 @@ def run_command(project: Project, args: argparse.Namespace) -> str:
 def work_command(project: Project, args: argparse.Namespace) -> str:
     """Generation phase: translate the pending shards of one model, upload each, within the budget."""
     from xx_to_en.cache import OutputCache
-    from xx_to_en.results_store import is_uploaded, shard_path, upload
+    from xx_to_en.results_store import repo_files, shard_path, upload
     from xx_to_en.runner import Decoding
-    from xx_to_en.worker import generate_shard, run_generation
+    from xx_to_en.worker import generate_shard, run_budgeted
 
     started = time.monotonic()
     model = project.model(args.model)
     if model.access == "not_accepted":
         raise SystemExit(f"{model.name}: access not accepted for this account")
-    shards = build_shards(model.name, project.plan(model))
-    todo = pending(shards, is_done=lambda shard: is_uploaded(args.results_repo, shard_path(shard)))
+    files = repo_files(args.results_repo)
+    todo = pending(
+        build_shards(model.name, project.plan(model)),
+        is_done=lambda shard: shard_path(shard) in files,
+    )
     if not todo:
         return f"{model.name}: nothing pending"
     backend = make_backend(model, model.backend, seed=args.seed)
@@ -176,21 +179,38 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
         upload(args.results_repo, out_file, shard_path(shard))
         print(f"uploaded {shard_path(shard)}", flush=True)
 
-    finished = run_generation(todo, budget_s=budget_s, generate=generate)
+    finished = run_budgeted(todo, budget_s=budget_s, step=generate)
     return f"{model.name}: generated {len(finished)} of {len(todo)} pending shards"
 
 
 def score_command(project: Project, args: argparse.Namespace) -> str:
-    """Scoring phase: score each generated shard of one model that has no scores uploaded yet."""
-    from xx_to_en.results_store import is_uploaded, score_path, shard_path, upload
-    from xx_to_en.worker import score_shard
+    """Scoring phase: score uploaded hypotheses of one model that have no scores yet, within the budget."""
+    from xx_to_en.metric_runtime import Scorers
+    from xx_to_en.results_store import download, repo_files, score_path, shard_path, upload
+    from xx_to_en.worker import run_budgeted, score_shard
 
+    started = time.monotonic()
     model = project.model(args.model)
-    scored = 0
-    for shard in build_shards(model.name, project.plan(model)):
+    files = repo_files(args.results_repo)
+    todo = [
+        shard
+        for shard in build_shards(model.name, project.plan(model))
+        if shard_path(shard) in files and score_path(shard) not in files
+    ]
+    if not todo:
+        return f"{model.name}: nothing to score"
+    scorers = Scorers(
+        metricx_repo=args.metricx_repo,
+        work=args.work / "metricx",
+        comet_batch=args.comet_batch,
+        metricx_batch=args.metricx_batch,
+    )
+    budget_s = max(0.0, args.budget_min * 60 - (time.monotonic() - started))
+
+    def score_one(shard: Any) -> None:
         hypotheses = args.work / "hyp" / shard_path(shard)
-        if not hypotheses.exists() or is_uploaded(args.results_repo, score_path(shard)):
-            continue
+        if not hypotheses.exists():
+            download(args.results_repo, shard_path(shard), hypotheses)
         out_file = args.work / "scores" / score_path(shard)
         score_shard(
             hypotheses,
@@ -198,15 +218,13 @@ def score_command(project: Project, args: argparse.Namespace) -> str:
             shard=shard,
             benchmarks=project.benchmarks,
             language_map=project.language_map,
-            metricx_repo=args.metricx_repo,
-            work=args.work / "metricx",
-            comet_batch=args.comet_batch,
-            metricx_batch=args.metricx_batch,
+            scorers=scorers,
         )
         upload(args.results_repo, out_file, score_path(shard))
-        scored += 1
         print(f"uploaded {score_path(shard)}", flush=True)
-    return f"{model.name}: scored {scored} shards"
+
+    finished = run_budgeted(todo, budget_s=budget_s, step=score_one)
+    return f"{model.name}: scored {len(finished)} of {len(todo)} pending shards"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -253,6 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--metricx-repo", type=Path, default=Path.home() / "src" / "metricx")
     score.add_argument("--comet-batch", type=int, default=64)
     score.add_argument("--metricx-batch", type=int, default=8)
+    score.add_argument("--budget-min", type=float, default=20.0, help="wall-clock budget for this job")
     score.add_argument("--configs", type=Path, default=Path("configs"))
     score.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
     return parser

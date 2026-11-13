@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from xx_to_en.plan import Shard
@@ -20,11 +21,20 @@ def score_path(shard: Shard) -> str:
     return shard_path(shard, prefix=SCORES_PREFIX)
 
 
-def is_uploaded(repo_id: str, path: str) -> bool:
-    """True when the file already exists in the dataset repository."""
+def repo_files(repo_id: str) -> set[str]:
+    """Every file path in the dataset repository (one API call)."""
     from huggingface_hub import HfApi
 
-    return HfApi().file_exists(repo_id=repo_id, filename=path, repo_type="dataset")
+    return set(HfApi().list_repo_files(repo_id=repo_id, repo_type="dataset"))
+
+
+def download(repo_id: str, path: str, local: Path) -> None:
+    """Copy one file from the dataset repository to ``local``."""
+    from huggingface_hub import hf_hub_download
+
+    cached = hf_hub_download(repo_id=repo_id, filename=path, repo_type="dataset")
+    local.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(cached, local)
 
 
 def upload(repo_id: str, local: Path, path: str) -> None:
