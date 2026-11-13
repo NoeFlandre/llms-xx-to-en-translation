@@ -17,11 +17,11 @@ from huggingface_hub import HfApi, hf_hub_download
 
 from xx_to_en.card import Cell, ModelScore, progress_table, render, results_table, winners_table
 from xx_to_en.cli import Project
-from xx_to_en.jsonl import read_records
 from xx_to_en.languages import corpus_languages
 from xx_to_en.plan import build_shards
 from xx_to_en.report import per_language_winner, volume_weighted_mean
 from xx_to_en.results_store import repo_files, score_path, shard_path
+from xx_to_en.tables import read_table
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = "NoeFlandre/llms-xx-to-en-translation"
@@ -50,7 +50,7 @@ def score_rows(files: set[str]) -> dict[str, list[dict]]:
     for path in sorted(f for f in files if f.startswith("scores/")):
         model = path.split("/")[1]
         local = hf_hub_download(repo_id=REPO, filename=path, repo_type="dataset")
-        rows[model].extend(read_records(Path(local)))
+        rows[model].extend(read_table(Path(local)))
     return rows
 
 

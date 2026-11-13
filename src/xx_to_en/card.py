@@ -122,8 +122,8 @@ Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
 ## Files
 
-- `results/<model>/<benchmark>/<shard>.jsonl`: hypotheses and token counts
-- `scores/<model>/<benchmark>/<shard>.jsonl`: per-segment scores and failure flags
+- `results/<model>/<benchmark>/<shard>.parquet`: hypotheses and token counts
+- `scores/<model>/<benchmark>/<shard>.parquet`: per-segment scores and failure flags
 
 Source and reference text are not copied: join on `(benchmark, bench_lang, segment_id)`
 with the public benchmark.

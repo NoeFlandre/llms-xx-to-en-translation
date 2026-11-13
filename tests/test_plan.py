@@ -32,7 +32,7 @@ def test_shard_ids_are_stable_and_zero_padded():
 def test_output_path_layout():
     shard = Shard("translategemma-4b-it", "flores_plus_devtest", 0, ("fra_Latn",))
     assert shard_path(shard) == (
-        "results/translategemma-4b-it/flores_plus_devtest/flores_plus_devtest-000.jsonl"
+        "results/translategemma-4b-it/flores_plus_devtest/flores_plus_devtest-000.parquet"
     )
 
 

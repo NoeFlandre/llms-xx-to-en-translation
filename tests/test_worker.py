@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 
 from xx_to_en.benchmarks import Segment
-from xx_to_en.jsonl import read_records
 from xx_to_en.plan import Shard
 from xx_to_en.runner import Translation
 from xx_to_en.worker import (
@@ -83,9 +82,21 @@ def test_public_rows_drop_source_and_reference():
 
 
 def test_hypothesis_file_round_trip(tmp_path: Path):
-    from xx_to_en.jsonl import write_records
+    from xx_to_en.tables import read_table, write_table
 
-    path = tmp_path / "shard.jsonl"
+    path = tmp_path / "shard.parquet"
     rows = hypothesis_rows([Translation(_segment(), "Hello.", 2, True)])
-    write_records(path, rows)
-    assert read_records(path) == rows
+    write_table(path, rows)
+    assert read_table(path) == rows
+
+
+def test_score_rows_with_missing_metrics_survive_parquet(tmp_path: Path):
+    from xx_to_en.tables import read_table, write_table
+
+    rows = [
+        {"segment_id": "0", "comet22": None, "chrf_pp": 40.0},
+        {"segment_id": "1", "comet22": 0.8, "chrf_pp": 50.0},
+    ]
+    path = tmp_path / "scores.parquet"
+    write_table(path, rows)
+    assert read_table(path) == rows

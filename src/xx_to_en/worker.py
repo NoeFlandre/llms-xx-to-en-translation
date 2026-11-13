@@ -16,11 +16,11 @@ from typing import TYPE_CHECKING, Any
 from xx_to_en.benchmarks import Segment
 from xx_to_en.cache import OutputCache
 from xx_to_en.config import BenchmarkConfig, ModelConfig
-from xx_to_en.jsonl import read_records, write_records
 from xx_to_en.languages import LanguageMap
 from xx_to_en.plan import Shard
 from xx_to_en.runner import Decoding, Translation, translate
 from xx_to_en.sources import load_segments
+from xx_to_en.tables import read_table, write_table
 
 if TYPE_CHECKING:
     from xx_to_en.metric_runtime import Scorers
@@ -130,7 +130,7 @@ def generate_shard(
                 iso=iso,
             )
         )
-    write_records(out_file, hypothesis_rows(translations))
+    write_table(out_file, hypothesis_rows(translations))
 
 
 def score_shard(
@@ -147,7 +147,7 @@ def score_shard(
     from xx_to_en.scoring import comet_inputs, is_neural_covered, merge_scores, metricx_inputs, scatter
 
     rows = attach_text(
-        read_records(hypothesis_file), segment_index(_all_segments(shard, benchmarks, language_map))
+        read_table(hypothesis_file), segment_index(_all_segments(shard, benchmarks, language_map))
     )
     neural = [is_neural_covered(language_map.iso639_1(row["corpus_lang"])) for row in rows]
     covered = [row for row, flag in zip(rows, neural, strict=True) if flag]
@@ -156,7 +156,7 @@ def score_shard(
     chrf = segment_chrf_pp([row["hypothesis"] for row in rows], [row["reference"] for row in rows])
     codes = scorers.glotlid([row["hypothesis"] for row in rows])
     merged = merge_scores(rows, chrf=chrf, comet=comet, metricx=metricx, codes=codes, neural=neural)
-    write_records(out_file, public_rows(merged))
+    write_table(out_file, public_rows(merged))
 
 
 def _all_segments(

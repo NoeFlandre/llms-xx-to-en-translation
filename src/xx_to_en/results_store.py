@@ -13,7 +13,7 @@ SCORES_PREFIX = "scores"
 
 def shard_path(shard: Shard, *, prefix: str = HYPOTHESES_PREFIX) -> str:
     """Repository path of a shard's hypotheses, e.g. ``results/<model>/<benchmark>/<shard>.jsonl``."""
-    return f"{prefix}/{shard.model}/{shard.benchmark}/{shard.shard_id}.jsonl"
+    return f"{prefix}/{shard.model}/{shard.benchmark}/{shard.shard_id}.parquet"
 
 
 def score_path(shard: Shard) -> str:

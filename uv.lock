@@ -2203,6 +2203,7 @@ source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pyyaml" },
     { name = "sacrebleu" },
@@ -2233,6 +2234,7 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'gpu'", specifier = ">=3.0" },
     { name = "huggingface-hub", marker = "extra == 'gpu'", specifier = ">=0.34" },
     { name = "numpy", specifier = ">=1.26" },
+    { name = "pyarrow", specifier = ">=16" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "sacrebleu", specifier = ">=2.4" },
