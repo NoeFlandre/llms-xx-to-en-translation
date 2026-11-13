@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One tiny job (1 h walltime): translate the pending shards of one model, then score them.
 # Every shard is uploaded to the results dataset when it finishes, so a killed job loses at most one
-# shard and the next job resumes from what exists.
+# shard and the next job resumes from what exists. Float16 jobs (Turing GPUs) skip scoring, which
+# needs bf16; a bf16 node scores those shards later.
 #
 #   oarsub -n xx2en-<model> -p "cluster='granite'" -l gpu=1,walltime=1:00 \
-#     "MODEL=translategemma-4b-it BUDGET_MIN=30 bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
+#     "MODEL=translategemma-4b-it DTYPE=bfloat16 BUDGET_MIN=30 bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 set -euo pipefail
 
 SRC="${SRC:-$HOME/src/llms-xx-to-en-translation}"
@@ -12,6 +13,8 @@ GEN="${GEN:-$HOME/venvs/xx2en}"
 MET="${MET:-$HOME/venvs/metrics}"
 MODEL="${MODEL:?set MODEL}"
 BUDGET_MIN="${BUDGET_MIN:-30}"
+SCORE_BUDGET_MIN="${SCORE_BUDGET_MIN:-20}"
+DTYPE="${DTYPE:-bfloat16}"
 REPO="${RESULTS_REPO:-NoeFlandre/llms-xx-to-en-translation}"
 JOB="${OAR_JOB_ID:-local}"
 WORK="/tmp/xx2en-${JOB}"
@@ -23,14 +26,17 @@ mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 
 cd "$SRC"
-echo "node: $(hostname)  model: $MODEL  budget: ${BUDGET_MIN} min"
+echo "node: $(hostname)  model: $MODEL  dtype: $DTYPE  budget: ${BUDGET_MIN} min"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
-"$GEN/bin/xx2en" work --model "$MODEL" --results-repo "$REPO" --work "$WORK" --budget-min "$BUDGET_MIN"
+"$GEN/bin/xx2en" work --model "$MODEL" --results-repo "$REPO" --work "$WORK" \
+  --budget-min "$BUDGET_MIN" --dtype "$DTYPE"
 
-if [ -x "$MET/bin/xx2en" ]; then
+if [ "$DTYPE" = "float16" ]; then
+  echo "float16 GPU: scoring needs bf16 and is left for a bf16 node"
+elif [ -x "$MET/bin/xx2en" ]; then
   "$MET/bin/xx2en" score --model "$MODEL" --results-repo "$REPO" --work "$WORK" \
-    --metricx-repo "$HOME/src/metricx" --budget-min "${SCORE_BUDGET_MIN:-20}"
+    --metricx-repo "$HOME/src/metricx" --budget-min "$SCORE_BUDGET_MIN"
 else
   echo "metrics environment missing at $MET: scoring skipped"
 fi

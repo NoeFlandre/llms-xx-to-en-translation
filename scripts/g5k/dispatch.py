@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Keep tiny one-hour jobs running on free Grid'5000 GPUs until every shard is in the results dataset.
+"""Keep tiny one-hour jobs running on free Grid'5000 GPUs until every shard and score is in the dataset.
 
 Runs on the development machine. On the frontends it only runs read-only commands (oarnodes, oarstat,
-usagepolicycheck) plus oarsub and oardel for the tiny jobs.
+usagepolicycheck) plus oarsub and oardel for the tiny jobs. Only default-queue clusters are used.
 
     uv run python scripts/g5k/dispatch.py --dry-run   # one cycle, print placements only
     uv run python scripts/g5k/dispatch.py             # loop every 5 minutes until nothing is pending
@@ -24,7 +24,7 @@ from typing import Any
 import yaml
 
 from xx_to_en.cli import Project
-from xx_to_en.dispatch import GpuPool, choose_placements, crosses_boundary
+from xx_to_en.dispatch import GpuPool, Pending, choose_placements, crosses_boundary
 from xx_to_en.gpu_probe import count_free
 from xx_to_en.plan import build_shards
 from xx_to_en.results_store import repo_files, score_path, shard_path
@@ -32,7 +32,6 @@ from xx_to_en.results_store import repo_files, score_path, shard_path
 ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE = Path.home() / ".cache" / "xx2en-dispatch" / "state.json"
 REPO = "NoeFlandre/llms-xx-to-en-translation"
-SITE_USER = "nflandre"
 STALE_WAIT_S = 540  # just under 10 minutes: a job that starts later loses the exemption
 POLL_S = 300
 MAX_NO_PROGRESS = 3  # consecutive jobs that finished without uploading anything
@@ -40,6 +39,7 @@ MAX_FAILURES_PER_CLUSTER = 2
 REMOTE_JOB = "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 OAR_ID = re.compile(r"OAR_JOB_ID=(\d+)")
 STATE_LINE = re.compile(r"state = (\w+)")
+PendingInfo = tuple[int, int, float, bool]  # (GPU memory need GB, missing files, size in billions, fp16_ok)
 
 
 def ssh(site: str, command: str) -> str:
@@ -69,11 +69,11 @@ def cancel(site: str, job_id: int) -> None:
     ssh(site, f"oardel {job_id} >/dev/null 2>&1")
 
 
-def submit(site: str, cluster: str, model: str) -> int | None:
+def submit(site: str, cluster: str, model: str, dtype: str) -> int | None:
     command = (
         f"oarsub -n xx2en-{model} -p \"cluster='{cluster}'\" -l gpu=1,walltime=1:00 "
         f'-O "$HOME/jobs/{model}.%jobid%.out" -E "$HOME/jobs/{model}.%jobid%.err" '
-        f'"MODEL={model} RESULTS_REPO={REPO} BUDGET_MIN=30 {REMOTE_JOB}"'
+        f'"MODEL={model} RESULTS_REPO={REPO} BUDGET_MIN=30 DTYPE={dtype} {REMOTE_JOB}"'
     )
     match = OAR_ID.search(ssh(site, command))
     return int(match.group(1)) if match else None
@@ -82,7 +82,7 @@ def submit(site: str, cluster: str, model: str) -> int | None:
 def load_state() -> dict[str, Any]:
     if STATE_FILE.exists():
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    return {"jobs": [], "attempts": {}, "failures": {}}
+    return {"jobs": [], "attempts": {}, "failures": {}, "no_progress": {}}
 
 
 def save_state(state: dict[str, Any]) -> None:
@@ -107,16 +107,16 @@ def refresh_jobs(state: dict[str, Any], now: float, remaining: dict[str, int]) -
     state["jobs"] = kept
 
 
-def pending_models(project: Project, done: set[str]) -> dict[str, tuple[int, int, float]]:
-    """Incomplete models: name -> (GPU memory need in GB, missing shard and score files, size in billions)."""
-    out: dict[str, tuple[int, int, float]] = {}
+def pending_models(project: Project, done: set[str]) -> dict[str, PendingInfo]:
+    """Incomplete models with what a placement needs to know about them."""
+    out: dict[str, PendingInfo] = {}
     for name, model in project.models.items():
         if model.official_languages == "pending":
             continue
         shards = build_shards(name, project.plan(model))
         missing = sum((shard_path(s) not in done) + (score_path(s) not in done) for s in shards)
         if missing:
-            out[name] = (model.gpu_memory_gb_min, missing, model.params_b)
+            out[name] = (model.gpu_memory_gb_min, missing, model.params_b, model.fp16_ok)
     return out
 
 
@@ -132,24 +132,30 @@ def usage_lines(sites: list[str]) -> list[str]:
 def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> list[GpuPool]:
     """Free GPUs per usable cluster, on sites that already have a generation environment."""
     ready = {site for site in {entry["site"] for entry in pools_config} if site_ready(site)}
+    counts = {site: probe_free(site) for site in ready}
     pools = []
     for entry in pools_config:
         cluster_key = f"{entry['site']}/{entry['cluster']}"
         if entry["site"] not in ready or state["failures"].get(cluster_key, 0) >= MAX_FAILURES_PER_CLUSTER:
             continue
-        free = probe_free(entry["site"])[f"{entry['cluster']}|{entry['gpu_model']}"]
-        pools.append(GpuPool(entry["site"], entry["cluster"], entry["memory_gb"], free))
+        free = counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"]
+        pools.append(
+            GpuPool(entry["site"], entry["cluster"], entry["memory_gb"], free, bool(entry.get("bf16", True)))
+        )
     return pools
 
 
 def launch(
-    placements: list[Any], state: dict[str, Any], dry_run: bool, pending: dict[str, tuple[int, int, float]]
+    placements: list[Any], state: dict[str, Any], dry_run: bool, pending: dict[str, PendingInfo]
 ) -> None:
     for placement in placements:
-        print(f"  -> {placement.model} on {placement.site}/{placement.cluster}", flush=True)
+        print(
+            f"  -> {placement.model} on {placement.site}/{placement.cluster} ({placement.dtype})",
+            flush=True,
+        )
         if dry_run:
             continue
-        job_id = submit(placement.site, placement.cluster, placement.model)
+        job_id = submit(placement.site, placement.cluster, placement.model, placement.dtype)
         if job_id is None:
             key = f"{placement.site}/{placement.cluster}"
             state["failures"][key] = state["failures"].get(key, 0) + 1
@@ -178,12 +184,12 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
     refresh_jobs(state, time.time(), {name: info[1] for name, info in pending.items()})
     no_progress = state.get("no_progress", {})
     ready = sorted(
-        (info[2], name, info[0])
+        (info[2], name, info[0], info[3])
         for name, info in pending.items()
         if no_progress.get(name, 0) < MAX_NO_PROGRESS
     )
     placements = choose_placements(
-        [(name, need) for _, name, need in ready],
+        [Pending(name, need, fp16) for _, name, need, fp16 in ready],
         build_pools(pools_config, state),
         running_models=frozenset(job["model"] for job in state["jobs"]),
         running_per_site=Counter(job["site"] for job in state["jobs"]),

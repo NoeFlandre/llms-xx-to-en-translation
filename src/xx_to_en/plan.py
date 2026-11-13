@@ -12,13 +12,13 @@ from dataclasses import dataclass
 from xx_to_en.runner import WorkItem
 
 LANGS_PER_SHARD: Mapping[str, int] = {
-    "flores_plus_devtest": 24,
-    "ntrex_128": 16,
-    "tatoeba_xen": 16,
-    "wmt22_xen": 16,
-    "wmt23_xen": 16,
+    "flores_plus_devtest": 8,
+    "ntrex_128": 8,
+    "tatoeba_xen": 8,
+    "wmt22_xen": 8,
+    "wmt23_xen": 8,
 }
-DEFAULT_LANGS_PER_SHARD = 16
+DEFAULT_LANGS_PER_SHARD = 8
 
 
 @dataclass(frozen=True)

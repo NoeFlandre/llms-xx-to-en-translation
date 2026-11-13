@@ -28,6 +28,7 @@ class ModelConfig(BaseModel):
     tensor_parallel: int = Field(ge=1)
     gpu_memory_gb_min: int = Field(gt=0)
     trust_remote_code: bool
+    fp16_ok: bool = False  # safe to run in float16 on Turing GPUs (no bf16)
     official_languages: list[str] | Literal["pending", "all"]
 
 

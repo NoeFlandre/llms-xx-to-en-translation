@@ -87,17 +87,17 @@ def plan_command(project: Project, model_name: str, benchmarks: list[str] | None
     )
 
 
-def make_backend(model: ModelConfig, kind: str, *, seed: int) -> Any:
+def make_backend(model: ModelConfig, kind: str, *, seed: int, dtype: str | None = None) -> Any:
     """Build the generation backend. Imports are deferred so planning works without the gpu extra."""
     if kind == "vllm":
         from xx_to_en.backends import VllmBackend
 
-        return VllmBackend(model, seed=seed)
+        return VllmBackend(model, seed=seed, dtype=dtype)
     if kind == "transformers":
         from xx_to_en.backends import TransformersBackend
 
         # NLLB needs its target language forced; MADLAD takes the target from a text prefix instead.
-        return TransformersBackend(model, seed=seed, force_target_lang=model.family == "nllb")
+        return TransformersBackend(model, seed=seed, force_target_lang=model.family == "nllb", dtype=dtype)
     raise SystemExit(f"unknown backend {kind!r}")
 
 
@@ -159,7 +159,7 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
     )
     if not todo:
         return f"{model.name}: nothing pending"
-    backend = make_backend(model, model.backend, seed=args.seed)
+    backend = make_backend(model, model.backend, seed=args.seed, dtype=args.dtype or None)
     cache = OutputCache(args.work / "cache")
     budget_s = max(0.0, args.budget_min * 60 - (time.monotonic() - started))
 
@@ -261,6 +261,7 @@ def build_parser() -> argparse.ArgumentParser:
     work.add_argument("--work", type=Path, required=True)
     work.add_argument("--budget-min", type=float, default=38.0, help="wall-clock budget for this job")
     work.add_argument("--seed", type=int, default=0)
+    work.add_argument("--dtype", default="", help="override the model dtype, e.g. float16 on Turing GPUs")
     work.add_argument("--configs", type=Path, default=Path("configs"))
     work.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
 

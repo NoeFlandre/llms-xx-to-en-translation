@@ -65,12 +65,14 @@ def clean_output(text: str) -> str:
 class VllmBackend:
     """Decoder-only models served by vLLM with greedy decoding."""
 
-    def __init__(self, model: ModelConfig, *, seed: int = 0, max_model_len: int = 4096) -> None:
+    def __init__(
+        self, model: ModelConfig, *, seed: int = 0, max_model_len: int = 4096, dtype: str | None = None
+    ) -> None:
         from vllm import LLM  # ty: ignore[import-not-found]
 
         self._llm = LLM(
             model=model.hf_repo,
-            dtype=model.dtype,
+            dtype=dtype or model.dtype,
             tensor_parallel_size=model.tensor_parallel,
             trust_remote_code=model.trust_remote_code,
             seed=seed,
@@ -129,6 +131,7 @@ class TransformersBackend:
         seed: int = 0,
         batch_size: int = 32,
         force_target_lang: bool = False,
+        dtype: str | None = None,
     ) -> None:
         import torch  # ty: ignore[import-not-found]
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer  # ty: ignore[import-not-found]
@@ -138,9 +141,9 @@ class TransformersBackend:
         self._tokenizer = AutoTokenizer.from_pretrained(
             model.hf_repo, trust_remote_code=model.trust_remote_code
         )
-        dtype = getattr(torch, model.dtype)
+        dtype_obj = getattr(torch, dtype or model.dtype)
         self._model = AutoModelForSeq2SeqLM.from_pretrained(
-            model.hf_repo, torch_dtype=dtype, trust_remote_code=model.trust_remote_code
+            model.hf_repo, torch_dtype=dtype_obj, trust_remote_code=model.trust_remote_code
         ).to("cuda")
         self._model.eval()
         self._batch_size = batch_size

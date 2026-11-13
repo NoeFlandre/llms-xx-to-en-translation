@@ -1,8 +1,10 @@
-# GPU clusters the default queue accepts for this account, probed with 1-minute test submissions.
-# Clusters that answer "You can only access the required resources in besteffort" are left out.
-# cluster and gpu_model must match the oarnodes properties; memory_gb is the per-GPU memory.
+# GPU clusters the default queue accepts for this account (probed with 1-minute test submissions).
+# Clusters that answer "besteffort" or "exotic" are left out. bf16: false marks Turing GPUs (float16 only).
 sites:
   - {site: nancy, cluster: granite, gpu_model: "RTX PRO 6000 Blackwell Server Edition", memory_gb: 96}
   - {site: nancy, cluster: gres, gpu_model: "L40S", memory_gb: 48}
   - {site: nancy, cluster: gruss, gpu_model: "A40", memory_gb: 48}
+  - {site: nancy, cluster: graffiti, gpu_model: "Quadro RTX 6000", memory_gb: 24, bf16: false}
+  - {site: nancy, cluster: grue, gpu_model: "Tesla T4", memory_gb: 16, bf16: false}
   - {site: sophia, cluster: musa, gpu_model: "H100 NVL", memory_gb: 96}
+  - {site: sophia, cluster: esterel19, gpu_model: "GeForce RTX 2080 Ti", memory_gb: 11, bf16: false}
