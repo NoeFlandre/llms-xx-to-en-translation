@@ -1,0 +1,12 @@
+name: ntrex_128
+description: NTREX-128 news test set (1997 sentences), originally English, human-translated into 128 languages.
+hf_repo: davidstap/NTREX
+layout: "{lang}"              # one dataset config per language
+text_field: text
+split: test
+direction: X->EN
+reference_lang: eng_Latn
+origin: english_translated
+license: unverified          # check dataset card before publishing outputs
+access: open
+language_map: languages.yaml

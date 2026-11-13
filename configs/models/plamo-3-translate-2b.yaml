@@ -1,0 +1,15 @@
+name: plamo-3-translate-2b
+hf_repo: pfnet/plamo-3-translate-2b
+family: plamo-3
+params_b: 2.9
+active_params_b: 2.9
+license: other                # PLaMo license; read it before publishing outputs
+access: open
+backend: vllm                 # verify vLLM architecture support; fall back to transformers
+prompt: plamo3_translate      # verify official prompt in the model card
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 16
+trust_remote_code: true
+official_languages: pending

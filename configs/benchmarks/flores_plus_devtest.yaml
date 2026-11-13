@@ -1,0 +1,12 @@
+name: flores_plus_devtest
+description: FLORES+ devtest (Wikipedia/Wikinews/Wikivoyage domains), translated from English.
+hf_repo: openlanguagedata/flores_plus
+layout: "devtest/{lang}.jsonl"
+text_field: text
+split: devtest
+direction: X->EN
+reference_lang: eng_Latn
+origin: english_translated   # sources were written in English and translated out
+license: cc-by-sa-4.0
+access: open               # access granted to this account
+language_map: languages.yaml

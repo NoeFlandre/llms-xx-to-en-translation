@@ -1,0 +1,11 @@
+site_name: llms-xx-to-en-translation
+site_description: Reproducible ranking of open translation models on X->English
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Methodology: methodology.md
+  - Coverage matrix: coverage_matrix.md

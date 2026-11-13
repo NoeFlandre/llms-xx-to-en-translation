@@ -1,0 +1,15 @@
+name: hy-mt2-30b-a3b
+hf_repo: tencent/Hy-MT2-30B-A3B
+family: hy-mt2
+params_b: 30.1
+active_params_b: 3.0
+license: apache-2.0
+access: open
+backend: vllm
+prompt: hy_mt2
+thinking: "off"
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 80
+trust_remote_code: true
+official_languages: pending

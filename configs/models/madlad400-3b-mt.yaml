@@ -1,0 +1,15 @@
+name: madlad400-3b-mt
+hf_repo: google/madlad400-3b-mt
+family: madlad
+params_b: 2.9
+active_params_b: 2.9
+license: apache-2.0
+access: open
+backend: transformers         # T5 encoder-decoder
+prompt: madlad_tag            # "<2en>" target tag
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 16
+trust_remote_code: false
+official_languages: pending

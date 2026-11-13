@@ -1,0 +1,15 @@
+name: nllb-200-3.3b
+hf_repo: facebook/nllb-200-3.3B
+family: nllb
+params_b: 3.3
+active_params_b: 3.3
+license: unverified           # model card reports CC-BY-NC; confirm before publishing
+access: open
+backend: transformers         # encoder-decoder; not served by vLLM here
+prompt: nllb_tag
+thinking: not_applicable
+dtype: float16
+tensor_parallel: 1
+gpu_memory_gb_min: 24
+trust_remote_code: false
+official_languages: pending   # NLLB-200 language list (FLORES-200 codes)

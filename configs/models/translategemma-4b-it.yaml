@@ -1,0 +1,15 @@
+name: translategemma-4b-it
+hf_repo: google/translategemma-4b-it
+family: translategemma
+params_b: 4.3
+active_params_b: 4.3
+license: gemma
+access: accepted              # gated repo; access confirmed for this account
+backend: vllm
+prompt: translategemma        # verify official template in the model card
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 24
+trust_remote_code: false
+official_languages: pending

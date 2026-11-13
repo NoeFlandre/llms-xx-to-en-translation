@@ -1,0 +1,15 @@
+name: translategemma-27b-it
+hf_repo: google/translategemma-27b-it
+family: translategemma
+params_b: 27.4
+active_params_b: 27.4
+license: gemma
+access: accepted
+backend: vllm
+prompt: translategemma
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 80
+trust_remote_code: false
+official_languages: pending

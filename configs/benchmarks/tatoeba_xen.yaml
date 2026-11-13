@@ -1,0 +1,9 @@
+name: tatoeba_xen
+description: Tatoeba Translation Challenge test sets, X->EN (short, user-written sentences; long-tail languages).
+hf_repo: Helsinki-NLP/tatoeba_mt
+split: test
+direction: X->EN
+origin: mixed              # community-written pairs; direction of authorship not recorded
+license: unverified          # Tatoeba content is CC-BY 2.0 FR; confirm for the packaged test sets
+access: open               # access granted to this account
+language_map: languages.yaml

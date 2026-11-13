@@ -1,0 +1,10 @@
+name: wmt22_xen
+description: WMT22 general test sets, X->EN directions only (native-source text).
+hf_repo: haoranxu/WMT22-Test
+config_filter: "*-en"         # configs whose target is English
+split: test
+direction: X->EN
+origin: native
+license: unverified
+access: open
+language_map: languages.yaml

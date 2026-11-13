@@ -1,0 +1,15 @@
+name: plamo-3-translate-8b
+hf_repo: pfnet/plamo-3-translate-8b
+family: plamo-3
+params_b: 8.5
+active_params_b: 8.5
+license: other
+access: open
+backend: vllm
+prompt: plamo3_translate
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 24
+trust_remote_code: true
+official_languages: pending

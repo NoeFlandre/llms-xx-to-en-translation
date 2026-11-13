@@ -1,0 +1,15 @@
+name: lfm3-1.7b
+hf_repo: LiquidAI/LFM3-1.7B
+family: lfm-3
+params_b: 1.7
+active_params_b: 1.7
+license: other                # LFM license; read it before publishing outputs
+access: open
+backend: vllm
+prompt: lfm_chat
+thinking: "off"                 # verify
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 8
+trust_remote_code: false
+official_languages: pending

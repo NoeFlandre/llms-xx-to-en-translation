@@ -1,0 +1,15 @@
+name: tiny-aya-global
+hf_repo: CohereLabs/tiny-aya-global
+family: tiny-aya
+params_b: 3.35
+active_params_b: 3.35
+license: cc-by-nc-4.0
+access: accepted              # gated repo; access confirmed for this account
+backend: vllm
+prompt: tiny_aya_chat         # verify official prompt in the model card
+thinking: "off"                 # verify
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 16
+trust_remote_code: false
+official_languages: pending

@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ty_cache/
+.coverage
+coverage.json
+htmlcov/
+site/
+.mutmut-cache/
+mutants/
+.DS_Store
+# Generated model outputs live on Hugging Face and Grid5000, never in git.
+outputs/
+cache/

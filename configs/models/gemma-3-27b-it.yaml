@@ -1,0 +1,15 @@
+name: gemma-3-27b-it
+hf_repo: google/gemma-3-27b-it
+family: gemma-3
+params_b: 27.4
+active_params_b: 27.4
+license: gemma
+access: accepted
+backend: vllm
+prompt: gemma_chat
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 80
+trust_remote_code: false
+official_languages: pending

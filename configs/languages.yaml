@@ -1,0 +1,95 @@
+# Corpus language config -> code used by each benchmark.
+# Missing benchmark key = same code is used (identity), e.g. fra_Latn -> fra_Latn.
+# Empty string = no equivalent variant in that benchmark (script or dialect mismatch).
+cmn_Hani:
+  flores_plus_devtest: cmn_Hans
+  ntrex_128: zho_Hans
+  wmt22_xen: zh
+  wmt23_xen: zh
+  tatoeba_xen: zho
+yue_Hani:
+  flores_plus_devtest: yue_Hant
+  ntrex_128: yue_Hant
+fas_Arab:
+  flores_plus_devtest: pes_Arab
+azj_Latn:
+  ntrex_128: aze_Latn
+  tatoeba_xen: aze
+ekk_Latn:
+  ntrex_128: est_Latn
+  tatoeba_xen: est
+npi_Deva:
+  ntrex_128: nep_Deva
+  tatoeba_xen: nep
+lvs_Latn:
+  ntrex_128: lav_Latn
+  tatoeba_xen: lav
+plt_Latn:
+  ntrex_128: mlg_Latn
+  tatoeba_xen: mlg
+pbt_Arab:
+  ntrex_128: pus_Arab
+  tatoeba_xen: pus
+als_Latn:
+  ntrex_128: sqi_Latn
+  tatoeba_xen: sqi
+zsm_Latn:
+  ntrex_128: msa_Latn
+  tatoeba_xen: msa
+uzn_Latn:
+  ntrex_128: uzb_Latn
+  tatoeba_xen: uzb
+khk_Cyrl:
+  ntrex_128: ""
+  tatoeba_xen: mon
+uzn_Cyrl:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: ""
+srp_Latn:
+  flores_plus_devtest: ""
+  tatoeba_xen: ""
+ben_Latn:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: ""
+kan_Latn:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: ""
+mar_Latn:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: ""
+tel_Latn:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: ""
+arb_Latn:
+  flores_plus_devtest: ""
+lat_Latn:
+  flores_plus_devtest: ""
+  ntrex_128: ""
+  tatoeba_xen: lat
+epo_Latn:
+  tatoeba_xen: epo
+ydd_Hebr:
+  tatoeba_xen: yid
+ces_Latn:
+  wmt22_xen: cs
+  wmt23_xen: cs
+deu_Latn:
+  wmt22_xen: de
+  wmt23_xen: de
+isl_Latn:
+  wmt22_xen: is
+  wmt23_xen: is
+rus_Cyrl:
+  wmt22_xen: ru
+  wmt23_xen: ru
+jpn_Jpan:
+  wmt23_xen: ja
+ukr_Cyrl:
+  wmt23_xen: uk
+heb_Hebr:
+  wmt23_xen: he

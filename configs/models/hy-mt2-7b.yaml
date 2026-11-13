@@ -1,0 +1,15 @@
+name: hy-mt2-7b
+hf_repo: tencent/Hy-MT2-7B
+family: hy-mt2
+params_b: 8.0
+active_params_b: 8.0
+license: apache-2.0
+access: open
+backend: vllm
+prompt: hy_mt2               # verify official prompt in the model card
+thinking: "off"                # verify
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 24
+trust_remote_code: true
+official_languages: pending

@@ -1,0 +1,15 @@
+name: translategemma-12b-it
+hf_repo: google/translategemma-12b-it
+family: translategemma
+params_b: 12.2
+active_params_b: 12.2
+license: gemma
+access: accepted
+backend: vllm
+prompt: translategemma
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 40
+trust_remote_code: false
+official_languages: pending
