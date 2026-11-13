@@ -11,6 +11,7 @@ from xx_to_en.scoring import (
     is_neural_covered,
     merge_scores,
     metricx_inputs,
+    metricx_text,
     pad_sequences,
     parse_metricx_output,
     scatter,
@@ -140,3 +141,8 @@ def test_pad_sequences_right_pads_and_masks_the_padding():
 
 def test_pad_sequences_on_empty_input():
     assert pad_sequences([], pad_id=0) == ([], [])
+
+
+def test_metricx_text_matches_the_upstream_format():
+    row = {"source": "Bonjour.", "hypothesis": "Hello.", "reference": "Hello there."}
+    assert metricx_text(row) == "source: Bonjour. candidate: Hello. reference: Hello there."

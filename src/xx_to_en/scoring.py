@@ -148,6 +148,11 @@ def parse_metricx_output(lines: Iterable[str]) -> list[float]:
     return [float(json.loads(line)["prediction"]) for line in lines if line.strip()]
 
 
+def metricx_text(row: Mapping[str, str]) -> str:
+    """MetricX-24 reference-based input string, built exactly as the upstream predict module builds it."""
+    return "source: " + row["source"] + " candidate: " + row["hypothesis"] + " reference: " + row["reference"]
+
+
 def pad_sequences(sequences: Sequence[Sequence[int]], pad_id: int) -> tuple[list[list[int]], list[list[int]]]:
     """Right-pad token id sequences to a common length; return the padded ids and attention masks."""
     width = max((len(sequence) for sequence in sequences), default=0)

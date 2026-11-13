@@ -11,8 +11,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from xx_to_en.jsonl import write_records
-from xx_to_en.scoring import glotlid_code
+from xx_to_en.scoring import glotlid_code, metricx_text, pad_sequences
 
 COMET_MODEL = "Unbabel/wmt22-comet-da"
 METRICX_MODEL = "google/metricx-24-hybrid-xl-v2p6"
@@ -21,38 +20,22 @@ GLOTLID_REPO = "cis-lmu/glotlid"
 GLOTLID_FILE = "model.bin"
 
 
-def _load_metricx(repo: Path) -> tuple[Any, Any, Any, Any]:
-    """Tokenizer, model, device and upstream predict module, from a google-research/metricx checkout."""
+def _load_metricx(repo: Path) -> tuple[Any, Any, Any]:
+    """Tokenizer, model and device for MetricX, using the upstream model class from ``repo``."""
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))
     import torch  # ty: ignore[import-not-found]
     import transformers  # ty: ignore[import-not-found]
-    from metricx24 import models, predict  # ty: ignore[import-not-found]
+    from metricx24 import models  # ty: ignore[import-not-found]
 
     # Slow (SentencePiece) tokenizer: the fast conversion imports protobuf generated code that
-    # unbabel-comet's protobuf<5 pin rules out. Tokenization is the same sentencepiece model.
+    # unbabel-comet's protobuf<5 pin rules out. The sentencepiece model is the same either way.
     tokenizer = transformers.AutoTokenizer.from_pretrained(METRICX_TOKENIZER, use_fast=False)
     device = torch.device("cuda")
     model = models.MT5ForRegression.from_pretrained(METRICX_MODEL, torch_dtype="auto")
     model.to(device)
     model.eval()
-    return tokenizer, model, device, predict
-
-
-def _padding_collator(pad_id: int, device: Any) -> Any:
-    """Batch variable-length MetricX inputs. The upstream predict script relies on batch size 1 instead."""
-    import torch  # ty: ignore[import-not-found]
-
-    from xx_to_en.scoring import pad_sequences
-
-    def collate(features: Sequence[dict[str, Any]]) -> dict[str, Any]:
-        ids, masks = pad_sequences([feature["input_ids"].tolist() for feature in features], pad_id)
-        return {
-            "input_ids": torch.tensor(ids, device=device),
-            "attention_mask": torch.tensor(masks, device=device),
-        }
-
-    return collate
+    return tokenizer, model, device
 
 
 class Scorers:
@@ -64,7 +47,7 @@ class Scorers:
         metricx_repo: Path,
         work: Path,
         comet_batch: int = 64,
-        metricx_batch: int = 8,
+        metricx_batch: int = 32,
         max_input_length: int = 1536,
     ) -> None:
         self._metricx_repo = metricx_repo
@@ -73,7 +56,7 @@ class Scorers:
         self._metricx_batch = metricx_batch
         self._max_input_length = max_input_length
         self._comet: Any = None
-        self._metricx: tuple[Any, Any, Any, Any] | None = None
+        self._metricx: tuple[Any, Any, Any] | None = None
         self._lid: Any = None
 
     def comet(self, inputs: Sequence[dict[str, str]]) -> list[float]:
@@ -88,31 +71,33 @@ class Scorers:
         return [float(score) for score in output.scores]
 
     def metricx(self, inputs: Sequence[dict[str, str]]) -> list[float]:
-        """MetricX-24 hybrid XL, reference-based, using the upstream dataset and model code in-process."""
+        """MetricX-24 hybrid XL, reference-based: tokenize as upstream does, batch by length, regress."""
         if not inputs:
             return []
         import torch  # ty: ignore[import-not-found]
-        import transformers  # ty: ignore[import-not-found]
 
         if self._metricx is None:
             self._metricx = _load_metricx(self._metricx_repo)
-        tokenizer, model, device, predict = self._metricx
-        self._work.mkdir(parents=True, exist_ok=True)
-        input_file = self._work / "metricx_input.jsonl"
-        write_records(input_file, inputs)
-        dataset = predict.get_dataset(str(input_file), tokenizer, self._max_input_length, device, False)
-        per_device = max(1, self._metricx_batch // max(1, torch.cuda.device_count()))
-        args = transformers.TrainingArguments(
-            output_dir=str(self._work),
-            per_device_eval_batch_size=per_device,
-            dataloader_pin_memory=False,
-            report_to=[],
-        )
-        trainer = transformers.Trainer(
-            model=model, args=args, data_collator=_padding_collator(tokenizer.pad_token_id, device)
-        )
-        predictions, _, _ = trainer.predict(test_dataset=dataset["test"])
-        return [float(value) for value in predictions]
+        tokenizer, model, device = self._metricx
+        rows = [
+            tokenizer(metricx_text(row), max_length=self._max_input_length, truncation=True, padding=False)[
+                "input_ids"
+            ][:-1]
+            for row in inputs
+        ]
+        order = sorted(range(len(rows)), key=lambda index: len(rows[index]))
+        scores = [0.0] * len(rows)
+        with torch.no_grad():
+            for start in range(0, len(order), self._metricx_batch):
+                chunk = order[start : start + self._metricx_batch]
+                ids, masks = pad_sequences([rows[index] for index in chunk], tokenizer.pad_token_id)
+                output = model(
+                    input_ids=torch.tensor(ids, device=device),
+                    attention_mask=torch.tensor(masks, device=device),
+                )
+                for index, value in zip(chunk, output.predictions.float().cpu().tolist(), strict=True):
+                    scores[index] = float(value)
+        return scores
 
     def glotlid(self, texts: Sequence[str]) -> list[str]:
         """Detected language per text as corpus-style codes (``eng_Latn``). Empty texts give ``""``."""

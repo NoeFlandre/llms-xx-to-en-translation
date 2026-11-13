@@ -270,7 +270,7 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--work", type=Path, required=True)
     score.add_argument("--metricx-repo", type=Path, default=Path.home() / "src" / "metricx")
     score.add_argument("--comet-batch", type=int, default=64)
-    score.add_argument("--metricx-batch", type=int, default=8)
+    score.add_argument("--metricx-batch", type=int, default=32)
     score.add_argument("--budget-min", type=float, default=20.0, help="wall-clock budget for this job")
     score.add_argument("--configs", type=Path, default=Path("configs"))
     score.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
