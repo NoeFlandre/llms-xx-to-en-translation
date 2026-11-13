@@ -22,14 +22,14 @@ def score_path(shard: Shard) -> str:
 
 def is_uploaded(repo_id: str, path: str) -> bool:
     """True when the file already exists in the dataset repository."""
-    from huggingface_hub import HfApi  # ty: ignore[import-not-found]
+    from huggingface_hub import HfApi
 
     return HfApi().file_exists(repo_id=repo_id, filename=path, repo_type="dataset")
 
 
 def upload(repo_id: str, local: Path, path: str) -> None:
     """Commit one file to the dataset repository."""
-    from huggingface_hub import HfApi  # ty: ignore[import-not-found]
+    from huggingface_hub import HfApi
 
     HfApi().upload_file(
         path_or_fileobj=str(local),

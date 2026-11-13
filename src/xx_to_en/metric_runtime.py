@@ -74,7 +74,7 @@ def metricx_scores(
 def glotlid_codes(texts: Sequence[str]) -> list[str]:
     """Detected language per text as corpus-style codes (``eng_Latn``). Empty texts give ``""``."""
     import fasttext  # ty: ignore[import-not-found]
-    from huggingface_hub import hf_hub_download  # ty: ignore[import-not-found]
+    from huggingface_hub import hf_hub_download
 
     model = fasttext.load_model(hf_hub_download(repo_id=GLOTLID_REPO, filename=GLOTLID_FILE))
     codes = []

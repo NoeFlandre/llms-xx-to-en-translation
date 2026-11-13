@@ -24,7 +24,7 @@ WMT_BENCHMARKS = frozenset({"wmt22_xen", "wmt23_xen"})
 
 
 def _hub_file(repo: str, filename: str) -> str:
-    from huggingface_hub import hf_hub_download  # ty: ignore[import-not-found]
+    from huggingface_hub import hf_hub_download
 
     return hf_hub_download(repo_id=repo, filename=filename, repo_type="dataset")
 
@@ -77,7 +77,7 @@ def _load_tatoeba(benchmark: BenchmarkConfig, corpus_lang: str, bench_lang: str)
 
 
 def _tatoeba_lines(repo: str, code: str) -> list[str]:
-    from huggingface_hub.utils import EntryNotFoundError  # ty: ignore[import-not-found]
+    from huggingface_hub.utils import EntryNotFoundError
 
     for pair in (f"{code}-eng", f"eng-{code}"):
         try:

@@ -24,6 +24,7 @@ xx2en = "xx_to_en.cli:main"
 
 [dependency-groups]
 dev = [
+    "huggingface-hub>=2.4.0",
     "mkdocs-material>=9.5",
     "mutmut>=3.0",
     "pytest>=8.0",
