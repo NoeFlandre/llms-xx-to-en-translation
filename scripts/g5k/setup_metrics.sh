@@ -17,7 +17,7 @@ if [ ! -x "$VENV/bin/python" ]; then
 fi
 "$VENV/bin/pip" install --quiet --upgrade pip
 # Constraint applies to build-isolated sdist builds too: some sdists import pkg_resources at build time.
-printf 'setuptools<80\npyarrow>=14,<17\n' > "$VENV/constraints.txt"
+printf 'setuptools<80\npyarrow>=17,<18\n' > "$VENV/constraints.txt"
 # MetricX's requirements.txt pins transformers 4.30.2 and sentencepiece 0.1.99, which conflict with
 # COMET 2.2.7. The resolver's versions are used instead; the smoke scoring run verifies MetricX.
 "$VENV/bin/pip" install --quiet -c "$VENV/constraints.txt" \
@@ -27,7 +27,7 @@ printf 'setuptools<80\npyarrow>=14,<17\n' > "$VENV/constraints.txt"
   datasets \
   sentencepiece \
   "setuptools<80" \
-  "pyarrow>=14,<17" \
+  "pyarrow>=17,<18" \
   "datasets>=2.19,<3"  # numpy stays 1.x (torchmetrics 0.10.3 pins it); pyarrow must match
 "$VENV/bin/pip" install --quiet -e "$SRC"
 "$VENV/bin/pip" freeze > "$VENV/freeze.txt"
