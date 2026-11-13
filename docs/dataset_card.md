@@ -12,7 +12,7 @@ tags:
 # llms-xx-to-en-translation
 
 Open models translating GeoReSeT corpus languages into English.
-[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 15:31 CET
+[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 16:03 CET
 
 ## Progress
 
@@ -26,9 +26,9 @@ Open models translating GeoReSeT corpus languages into English.
 | hy-mt2-7b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | lfm3-1.7b | — | — | — | — | — |
 | madlad400-10b-mt | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| madlad400-3b-mt | █░░░░░ 1/11 | ░░░░░░ 0/10 | ██████ 1/1 | ░░░░░░ 0/1 | ██░░░░ 2/8 |
+| madlad400-3b-mt | █░░░░░ 2/11 | ░░░░░░ 0/10 | ██████ 1/1 | ██████ 1/1 | ██░░░░ 2/8 |
 | nllb-200-3.3b | █░░░░░ 1/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| plamo-3-translate-2b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| plamo-3-translate-2b | █░░░░░ 1/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | plamo-3-translate-8b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | qwen3.8-27b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | tiny-aya-global | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
