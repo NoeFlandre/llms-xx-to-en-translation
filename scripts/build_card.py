@@ -60,24 +60,29 @@ def mean(values: list[float]) -> float | None:
 
 def summarize(
     project: Project, rows: dict[str, list[dict]]
-) -> tuple[list[ModelScore], dict[str, tuple[str, float]]]:
+) -> tuple[list[ModelScore], dict[str, tuple[str, float]], int]:
+    """Per-model scores. Overall chrF++ uses only the languages every scored model covers, so scopes match."""
     volumes = corpus_languages(project.inventory.corpus_rows)
-    summaries: list[ModelScore] = []
     per_language: dict[str, dict[str, float]] = {}
+    raw: dict[str, list[dict]] = {}
     for model, records in rows.items():
         by_lang: dict[str, list[float]] = defaultdict(list)
         for record in records:
             by_lang[record["corpus_lang"]].append(record["chrf_pp"])
-        lang_means = {lang: sum(values) / len(values) for lang, values in by_lang.items()}
-        per_language[model] = lang_means
+        per_language[model] = {lang: sum(v) / len(v) for lang, v in by_lang.items()}
+        raw[model] = records
+    common = set.intersection(*(set(lm) for lm in per_language.values())) if per_language else set()
+    summaries: list[ModelScore] = []
+    for model, records in raw.items():
         comet = [r["comet22"] for r in records if r.get("comet22") is not None]
         metricx = [r["metricx24"] for r in records if r.get("metricx24") is not None]
         failures = sum(any(r.get(flag) for flag in FAILURE_FLAGS) for r in records)
+        common_scores = {lang: per_language[model][lang] for lang in common}
         summaries.append(
             ModelScore(
                 model=model,
                 chrf_pp=mean([r["chrf_pp"] for r in records]) or 0.0,
-                overall_chrf_pp=volume_weighted_mean(lang_means, volumes) if lang_means else 0.0,
+                overall_chrf_pp=volume_weighted_mean(common_scores, volumes) if common_scores else 0.0,
                 comet22=mean(comet),
                 metricx24=mean(metricx),
                 failure_rate=failures / len(records),
@@ -86,9 +91,9 @@ def summarize(
         )
     winners = {}
     if per_language:
-        best = per_language_winner({m: lm for m, lm in per_language.items()})
+        best = per_language_winner(per_language)
         winners = {lang: (model, per_language[model][lang]) for lang, model in best.items()}
-    return summaries, winners
+    return summaries, winners, len(common)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,12 +105,17 @@ def main(argv: list[str] | None = None) -> int:
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     files = repo_files(REPO)
     grid = progress(project, files)
-    summaries, winners = summarize(project, score_rows(files))
+    summaries, winners, common_count = summarize(project, score_rows(files))
     updated = datetime.now().strftime("%Y-%m-%d %H:%M CET")
     card = render(
         updated,
         progress_table(grid),
-        results_table(summaries),
+        (
+            f"Overall chrF++ uses the {common_count} languages every scored model covers.\n\n"
+            if summaries
+            else ""
+        )
+        + results_table(summaries),
         winners_table(winners),
     )
     out = ROOT / "docs" / "dataset_card.md"
