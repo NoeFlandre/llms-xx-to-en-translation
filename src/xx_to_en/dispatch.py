@@ -16,8 +16,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 JOB_MINUTES = 60
-MAX_JOBS_PER_SITE = 8
-MAX_JOBS_TOTAL = 20
+MAX_JOBS_PER_SITE = 12
+MAX_JOBS_TOTAL = 40
+# Besteffort is granted, but the usage policy asks for staff contact before large-scale use: keep it modest.
+MAX_BESTEFFORT_JOBS = 4
 BOUNDARY_HOURS = (9, 19)
 
 
@@ -28,6 +30,7 @@ class GpuPool:
     memory_gb: int
     free: int
     bf16: bool = True
+    besteffort: bool = False
 
 
 @dataclass(frozen=True)
@@ -43,6 +46,7 @@ class Placement:
     site: str
     cluster: str
     dtype: str = "bfloat16"
+    queue: str = "default"
 
 
 def crosses_boundary(start: datetime, minutes: int = JOB_MINUTES) -> bool:
@@ -64,6 +68,7 @@ def choose_placements(
     *,
     running_models: frozenset[str],
     running_per_site: Mapping[str, int],
+    running_besteffort: int = 0,
 ) -> list[Placement]:
     """Assign pending models, in priority order, to free GPUs.
 
@@ -73,6 +78,7 @@ def choose_placements(
     free = {(pool.site, pool.cluster): pool.free for pool in pools}
     per_site = dict(running_per_site)
     total = sum(per_site.values())
+    besteffort_total = running_besteffort
     placements: list[Placement] = []
     for item in pending:
         if item.model in running_models or any(p.model == item.model for p in placements):
@@ -86,12 +92,18 @@ def choose_placements(
             and free[(pool.site, pool.cluster)] > 0
             and per_site.get(pool.site, 0) < MAX_JOBS_PER_SITE
             and (pool.bf16 or item.fp16_ok)
+            and (not pool.besteffort or besteffort_total < MAX_BESTEFFORT_JOBS)
         ]
         if not options:
             continue
-        best = min(options, key=lambda pool: (not pool.bf16, pool.memory_gb, pool.site, pool.cluster))
+        best = min(
+            options,
+            key=lambda pool: (pool.besteffort, not pool.bf16, pool.memory_gb, pool.site, pool.cluster),
+        )
         dtype = "bfloat16" if best.bf16 else "float16"
-        placements.append(Placement(item.model, best.site, best.cluster, dtype))
+        queue = "besteffort" if best.besteffort else "default"
+        besteffort_total += best.besteffort
+        placements.append(Placement(item.model, best.site, best.cluster, dtype, queue))
         free[(best.site, best.cluster)] -= 1
         per_site[best.site] = per_site.get(best.site, 0) + 1
         total += 1

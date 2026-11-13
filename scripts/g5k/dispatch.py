@@ -71,10 +71,12 @@ def cancel(site: str, job_id: int) -> None:
     ssh(site, f"oardel {job_id} >/dev/null 2>&1")
 
 
-def submit(site: str, cluster: str, model: str, benchmark: str, dtype: str) -> int | None:
+def submit(site: str, cluster: str, model: str, benchmark: str, dtype: str, queue: str) -> int | None:
     env = f"MODEL={model} BENCHMARK={benchmark} RESULTS_REPO={REPO} BUDGET_MIN=30 DTYPE={dtype}"
+    queue_flag = " -q besteffort" if queue == "besteffort" else ""
     command = (
-        f"oarsub -n xx2en-{model}-{benchmark[:6]} -p \"cluster='{cluster}'\" -l gpu=1,walltime=1:00 "
+        f"oarsub -n xx2en-{model}-{benchmark[:6]} -p \"cluster='{cluster}'\"{queue_flag} "
+        "-l gpu=1,walltime=1:00 "
         f'-O "$HOME/jobs/{model}.{benchmark}.%jobid%.out" -E "$HOME/jobs/{model}.{benchmark}.%jobid%.err" '
         f'"{env} {REMOTE_JOB}"'
     )
@@ -162,7 +164,14 @@ def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> li
         )
         free = max(0, counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"] - waiting)
         pools.append(
-            GpuPool(entry["site"], entry["cluster"], entry["memory_gb"], free, bool(entry.get("bf16", True)))
+            GpuPool(
+                entry["site"],
+                entry["cluster"],
+                entry["memory_gb"],
+                free,
+                bool(entry.get("bf16", True)),
+                besteffort=entry.get("queue") == "besteffort",
+            )
         )
     return pools
 
@@ -178,7 +187,7 @@ def launch(
         )
         if dry_run:
             continue
-        job_id = submit(placement.site, placement.cluster, model, benchmark, placement.dtype)
+        job_id = submit(placement.site, placement.cluster, model, benchmark, placement.dtype, placement.queue)
         if job_id is None:
             key = f"{placement.site}/{placement.cluster}"
             state["failures"][key] = state["failures"].get(key, 0) + 1
@@ -194,6 +203,7 @@ def launch(
                 "submitted": time.time(),
                 "state": "Waiting",
                 "remaining_at_submit": pending[placement.model][1],
+                "queue": placement.queue,
             }
         )
 
@@ -216,6 +226,7 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
         build_pools(pools_config, state),
         running_models=frozenset(job["model"] for job in state["jobs"]),
         running_per_site=Counter(job["site"] for job in state["jobs"]),
+        running_besteffort=sum(job.get("queue") == "besteffort" for job in state["jobs"]),
     )
     summary = f"pending {len(pending)} work items; running {len(state['jobs'])}; placements {len(placements)}"
     print(f"{now:%H:%M}: {summary}", flush=True)

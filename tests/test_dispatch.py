@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 
 from xx_to_en.dispatch import (
+    MAX_BESTEFFORT_JOBS,
     MAX_JOBS_PER_SITE,
     GpuPool,
     Pending,
@@ -63,6 +64,20 @@ def test_no_free_gpu_no_placement():
     assert _place([Pending("a", 8)], [_pool("nancy", "gres", 48, 0)]) == []
 
 
+def test_default_queue_is_preferred_over_besteffort():
+    pools = [_pool("sophia", "esterel45", 96, 5), _pool("nancy", "gres", 48, 5)]
+    pools[0] = GpuPool("sophia", "esterel45", 96, 5, True, besteffort=True)
+    placement = _place([Pending("big", 40)], pools)[0]
+    assert placement.cluster == "gres"
+    assert placement.queue == "default"
+
+
+def test_besteffort_used_when_default_is_full():
+    pools = [GpuPool("sophia", "esterel45", 96, 5, True, besteffort=True)]
+    placement = _place([Pending("big", 40)], pools)[0]
+    assert placement.queue == "besteffort"
+
+
 def test_turing_pool_takes_only_fp16_models():
     pools = [_pool("nancy", "grue", 16, 5, bf16=False)]
     assert _place([Pending("bf16-only", 8, fp16_ok=False)], pools) == []
@@ -75,3 +90,11 @@ def test_bf16_pools_preferred_over_turing():
     placement = _place([Pending("small", 8, fp16_ok=True)], pools)[0]
     assert placement.cluster == "gres"
     assert placement.dtype == "bfloat16"
+
+
+def test_besteffort_is_capped_while_staff_contact_is_pending():
+    pools = [GpuPool("sophia", "esterel36", 40, 20, True, besteffort=True)]
+    pending = [Pending(f"m{i}", 8) for i in range(10)]
+    placements = _place(pending, pools)
+    assert len(placements) == MAX_BESTEFFORT_JOBS
+    assert all(p.queue == "besteffort" for p in placements)
