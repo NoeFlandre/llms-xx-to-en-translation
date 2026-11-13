@@ -15,6 +15,8 @@ JOB="${OAR_JOB_ID:-local}"
 WORK="/tmp/xx2en-${JOB}"
 
 export HF_HOME="${WORK}/hf"
+# FlashInfer top-k/top-p sampling JIT-compiles with nvcc, which compute nodes lack; greedy decoding does not need it.
+export VLLM_USE_FLASHINFER_SAMPLER=0
 export HF_TOKEN="$(cat "$HOME/.cache/huggingface/token")"
 mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
