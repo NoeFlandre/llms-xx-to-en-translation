@@ -11,6 +11,7 @@ from xx_to_en.scoring import (
     is_neural_covered,
     merge_scores,
     metricx_inputs,
+    pad_sequences,
     parse_metricx_output,
     scatter,
 )
@@ -129,3 +130,13 @@ def test_jsonl_round_trip(tmp_path: Path):
     rows = [_record(), _record(hypothesis="Bonjour")]
     write_records(path, rows)
     assert read_records(path) == rows
+
+
+def test_pad_sequences_right_pads_and_masks_the_padding():
+    ids, masks = pad_sequences([[5, 6, 7], [9]], pad_id=0)
+    assert ids == [[5, 6, 7], [9, 0, 0]]
+    assert masks == [[1, 1, 1], [1, 0, 0]]
+
+
+def test_pad_sequences_on_empty_input():
+    assert pad_sequences([], pad_id=0) == ([], [])

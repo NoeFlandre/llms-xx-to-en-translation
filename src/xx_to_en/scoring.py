@@ -148,6 +148,14 @@ def parse_metricx_output(lines: Iterable[str]) -> list[float]:
     return [float(json.loads(line)["prediction"]) for line in lines if line.strip()]
 
 
+def pad_sequences(sequences: Sequence[Sequence[int]], pad_id: int) -> tuple[list[list[int]], list[list[int]]]:
+    """Right-pad token id sequences to a common length; return the padded ids and attention masks."""
+    width = max((len(sequence) for sequence in sequences), default=0)
+    ids = [list(sequence) + [pad_id] * (width - len(sequence)) for sequence in sequences]
+    masks = [[1] * len(sequence) + [0] * (width - len(sequence)) for sequence in sequences]
+    return ids, masks
+
+
 def glotlid_code(raw_label: str) -> str:
     """Strip the fastText label prefix: ``__label__fra_Latn`` becomes ``fra_Latn``."""
     return raw_label.removeprefix(GLOTLID_PREFIX)

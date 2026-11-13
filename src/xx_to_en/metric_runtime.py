@@ -39,6 +39,22 @@ def _load_metricx(repo: Path) -> tuple[Any, Any, Any, Any]:
     return tokenizer, model, device, predict
 
 
+def _padding_collator(pad_id: int, device: Any) -> Any:
+    """Batch variable-length MetricX inputs. The upstream predict script relies on batch size 1 instead."""
+    import torch  # ty: ignore[import-not-found]
+
+    from xx_to_en.scoring import pad_sequences
+
+    def collate(features: Sequence[dict[str, Any]]) -> dict[str, Any]:
+        ids, masks = pad_sequences([feature["input_ids"].tolist() for feature in features], pad_id)
+        return {
+            "input_ids": torch.tensor(ids, device=device),
+            "attention_mask": torch.tensor(masks, device=device),
+        }
+
+    return collate
+
+
 class Scorers:
     """Lazy, load-once metric models shared by every shard of a job."""
 
@@ -92,7 +108,9 @@ class Scorers:
             dataloader_pin_memory=False,
             report_to=[],
         )
-        trainer = transformers.Trainer(model=model, args=args)
+        trainer = transformers.Trainer(
+            model=model, args=args, data_collator=_padding_collator(tokenizer.pad_token_id, device)
+        )
         predictions, _, _ = trainer.predict(test_dataset=dataset["test"])
         return [float(value) for value in predictions]
 
