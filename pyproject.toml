@@ -11,6 +11,14 @@ dependencies = [
     "sacrebleu>=2.4",
 ]
 
+[project.optional-dependencies]
+gpu = [
+    "datasets>=3.0",
+    "huggingface-hub>=0.34",
+    "transformers>=4.56",
+    "vllm>=0.10",
+]
+
 [project.scripts]
 xx2en = "xx_to_en.cli:main"
 

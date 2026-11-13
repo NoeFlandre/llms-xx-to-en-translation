@@ -1,14 +1,23 @@
-"""Command-line entry point: ``xx2en check-configs`` and ``xx2en coverage``."""
+"""Command-line entry point.
+
+- ``xx2en check-configs``: validate every YAML config.
+- ``xx2en coverage``: write the language x benchmark coverage matrix.
+- ``xx2en plan --model M``: list the benchmark x language work the model is allowed to run.
+- ``xx2en run --model M``: translate on a node (needs the ``gpu`` extra and a GPU).
+"""
 
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
+from typing import Any
 
-from xx_to_en.config import load_benchmarks, load_language_map, load_models
+from xx_to_en.config import BenchmarkConfig, ModelConfig, load_benchmarks, load_language_map, load_models
 from xx_to_en.coverage import build_coverage, render_markdown, summarize
-from xx_to_en.inventory import load_inventory
-from xx_to_en.languages import LanguageMap
+from xx_to_en.inventory import Inventory, load_inventory
+from xx_to_en.languages import LanguageMap, corpus_languages
+from xx_to_en.runner import WorkItem, plan_work
 
 
 def check_configs(root: Path) -> str:
@@ -30,8 +39,100 @@ def write_coverage(configs: Path, inventory_path: Path, out: Path) -> str:
     return f"wrote {out} ({summary.configs} configs, {summary.uncovered_rows:,} uncovered rows)"
 
 
+class Project:
+    """Loaded configs and inventory for one configs directory."""
+
+    def __init__(self, configs: Path, inventory_path: Path) -> None:
+        self.models: dict[str, ModelConfig] = load_models(configs / "models")
+        self.benchmarks: dict[str, BenchmarkConfig] = load_benchmarks(configs / "benchmarks")
+        self.language_map = LanguageMap(load_language_map(configs / "languages.yaml"))
+        self.inventory: Inventory = load_inventory(inventory_path)
+
+    def model(self, name: str) -> ModelConfig:
+        if name not in self.models:
+            raise SystemExit(f"unknown model {name!r}; known: {', '.join(sorted(self.models))}")
+        return self.models[name]
+
+    def supported_languages(self, model: ModelConfig) -> frozenset[str]:
+        """Corpus codes the model officially supports. Refuses models whose list is still pending."""
+        if model.official_languages == "pending":
+            raise SystemExit(
+                f"{model.name}: official_languages is pending; fill it from the model card first"
+            )
+        return frozenset(model.official_languages)
+
+    def plan(self, model: ModelConfig, benchmarks: list[str] | None = None) -> list[WorkItem]:
+        names = benchmarks or sorted(self.benchmarks)
+        return plan_work(
+            names,
+            corpus_languages(self.inventory.corpus_rows),
+            self.inventory,
+            self.language_map,
+            supported=self.supported_languages(model),
+        )
+
+
+def plan_command(project: Project, model_name: str, benchmarks: list[str] | None) -> str:
+    model = project.model(model_name)
+    items = project.plan(model, benchmarks)
+    per_benchmark: dict[str, int] = {}
+    for item in items:
+        per_benchmark[item.benchmark] = per_benchmark.get(item.benchmark, 0) + 1
+    return json.dumps(
+        {"model": model.name, "work_items": len(items), "per_benchmark": per_benchmark}, indent=2
+    )
+
+
+def make_backend(model: ModelConfig, kind: str, *, seed: int) -> Any:
+    """Build the generation backend. Imports are deferred so planning works without the gpu extra."""
+    if kind == "vllm":
+        from xx_to_en.backends import VllmBackend
+
+        return VllmBackend(model, seed=seed)
+    if kind == "transformers":
+        from xx_to_en.backends import TransformersBackend
+
+        return TransformersBackend(model, seed=seed)
+    raise SystemExit(f"unknown backend {kind!r}")
+
+
+def run_command(project: Project, args: argparse.Namespace) -> str:
+    from xx_to_en.backends import Backend  # noqa: F401 - type reference for readers
+    from xx_to_en.cache import OutputCache
+    from xx_to_en.runner import Decoding, run_work_item
+    from xx_to_en.sources import load_segments
+
+    model = project.model(args.model)
+    if model.access == "not_accepted":
+        raise SystemExit(f"{model.name}: access not accepted for this account")
+    items = [
+        item
+        for item in project.plan(model, args.benchmarks)
+        if not args.langs or item.corpus_lang in args.langs
+    ]
+    if not items:
+        raise SystemExit("nothing to run for the selected model, benchmarks and languages")
+    backend = make_backend(model, args.backend, seed=args.seed)
+    cache = OutputCache(Path(args.cache))
+    decoding = Decoding(seed=args.seed)
+    out_dir = Path(args.out)
+    lines = []
+    for item in items:
+        segments = load_segments(project.benchmarks[item.benchmark], item.corpus_lang, item.bench_lang)
+        if args.limit:
+            segments = segments[: args.limit]
+        summary = run_work_item(
+            item, segments, model=model, backend=backend, cache=cache, out_dir=out_dir, decoding=decoding
+        )
+        lines.append(json.dumps(summary, ensure_ascii=False))
+        print(lines[-1], flush=True)
+    return f"{len(items)} work items done"
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="xx2en", description=__doc__)
+    parser = argparse.ArgumentParser(
+        prog="xx2en", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     check = commands.add_parser("check-configs", help="validate all YAML configs")
@@ -41,6 +142,20 @@ def build_parser() -> argparse.ArgumentParser:
     coverage.add_argument("--configs", type=Path, default=Path("configs"))
     coverage.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
     coverage.add_argument("--out", type=Path, default=Path("docs/coverage_matrix.md"))
+
+    for name, help_text in (("plan", "list allowed work for a model"), ("run", "translate on a node")):
+        sub = commands.add_parser(name, help=help_text)
+        sub.add_argument("--model", required=True)
+        sub.add_argument("--benchmarks", nargs="+", default=None)
+        sub.add_argument("--configs", type=Path, default=Path("configs"))
+        sub.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
+        if name == "run":
+            sub.add_argument("--langs", nargs="+", default=None, help="corpus codes, e.g. fra_Latn")
+            sub.add_argument("--limit", type=int, default=0, help="segments per work item (0 = all)")
+            sub.add_argument("--backend", choices=["vllm", "transformers"], default="vllm")
+            sub.add_argument("--seed", type=int, default=0)
+            sub.add_argument("--out", default="outputs")
+            sub.add_argument("--cache", default="cache")
     return parser
 
 
@@ -48,6 +163,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "check-configs":
         print(check_configs(args.root))
-    else:
+    elif args.command == "coverage":
         print(write_coverage(args.configs, args.inventory, args.out))
+    else:
+        project = Project(args.configs, args.inventory)
+        if args.command == "plan":
+            print(plan_command(project, args.model, args.benchmarks))
+        else:
+            print(run_command(project, args))
     return 0
