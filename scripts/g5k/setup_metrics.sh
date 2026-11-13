@@ -34,7 +34,8 @@ printf 'setuptools<80\npyarrow>=16,<18\n' > "$CONSTRAINTS"
   "datasets>=2.19,<3" \
   "sentencepiece" \
   "setuptools<80" \
-  "pyarrow>=16,<18"
+  "pyarrow>=16,<18" \
+  "accelerate>=0.26"  # transformers Trainer (used by MetricX predict) requires it
 "$UV" pip install --python "$VENV/bin/python" -e "$SRC"
 "$UV" pip freeze --python "$VENV/bin/python" > "$VENV/freeze.txt"
 echo "installed: $(wc -l < "$VENV/freeze.txt") packages; freeze at $VENV/freeze.txt"
