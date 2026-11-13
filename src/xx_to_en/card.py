@@ -131,8 +131,9 @@ Each row carries its own provenance: `model_revision`, `prompt_template`, `promp
 `code_commit`, `generated_at`. Generated text is in `hypothesis`; the untouched model output is in
 `raw_hypothesis`, with `finish_reason` and `truncated`.
 
-Source and reference text are not copied: join on `(benchmark, bench_lang, segment_id)`
-with the public benchmark.
+Source and reference text are included in every row, so each shard stands alone.
+Benchmark licences apply to those texts: FLORES+ CC-BY-SA-4.0, Tatoeba CC-BY,
+NTREX and WMT per their dataset cards.
 
 ## Method
 

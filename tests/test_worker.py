@@ -54,7 +54,8 @@ def test_hypothesis_rows_carry_ids_and_output_but_no_text():
     row = hypothesis_rows([translation])[0]
     assert row["hypothesis"] == "Hello."
     assert row["segment_id"] == "0"
-    assert "source" not in row and "reference" not in row
+    assert row["source"] == "Bonjour."
+    assert row["reference"] == "Hello."
 
 
 def test_attach_text_joins_by_benchmark_language_and_id():
@@ -71,13 +72,14 @@ def test_attach_text_fails_loudly_on_unknown_segment():
         attach_text(rows, segment_index([_segment("8")]))
 
 
-def test_public_rows_drop_source_and_reference():
+def test_public_rows_keep_source_and_reference():
     joined = attach_text(
         hypothesis_rows([Translation(_segment(), "Hello.", 2, False)]),
         segment_index([_segment()]),
     )
     cleaned = public_rows(joined)[0]
-    assert "source" not in cleaned and "reference" not in cleaned
+    assert cleaned["source"] == "Bonjour."
+    assert cleaned["reference"] == "Hello."
     assert cleaned["hypothesis"] == "Hello."
 
 
