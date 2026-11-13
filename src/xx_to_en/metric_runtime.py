@@ -29,7 +29,9 @@ def _load_metricx(repo: Path) -> tuple[Any, Any, Any, Any]:
     import transformers  # ty: ignore[import-not-found]
     from metricx24 import models, predict  # ty: ignore[import-not-found]
 
-    tokenizer = transformers.AutoTokenizer.from_pretrained(METRICX_TOKENIZER)
+    # Slow (SentencePiece) tokenizer: the fast conversion imports protobuf generated code that
+    # unbabel-comet's protobuf<5 pin rules out. Tokenization is the same sentencepiece model.
+    tokenizer = transformers.AutoTokenizer.from_pretrained(METRICX_TOKENIZER, use_fast=False)
     device = torch.device("cuda")
     model = models.MT5ForRegression.from_pretrained(METRICX_MODEL, torch_dtype="auto")
     model.to(device)
