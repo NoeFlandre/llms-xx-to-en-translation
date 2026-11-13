@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from xx_to_en.cli import check_configs, main
+from xx_to_en.languages import corpus_languages
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -59,10 +60,18 @@ def test_all_value_means_every_corpus_language():
     assert len(supported) == 94
 
 
-def test_translategemma_list_is_the_55_locale_set():
+def test_every_model_runs_every_corpus_language():
     from xx_to_en.cli import Project
 
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
-    supported = project.supported_languages(project.model("translategemma-4b-it"))
-    assert len(supported) == 47
-    assert "fra_Latn" in supported and "ceb_Latn" not in supported
+    corpus = set(corpus_languages(project.inventory.corpus_rows))
+    assert project.supported_languages(project.model("translategemma-4b-it")) == corpus
+    assert project.supported_languages(project.model("nllb-200-3.3b")) == corpus
+
+
+def test_disabled_model_is_refused():
+    from xx_to_en.cli import Project
+
+    project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
+    with pytest.raises(SystemExit):
+        project.supported_languages(project.model("lfm3-1.7b"))

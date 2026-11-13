@@ -57,14 +57,10 @@ class Project:
         return self.models[name]
 
     def supported_languages(self, model: ModelConfig) -> frozenset[str]:
-        """Corpus codes the model officially supports. Refuses models whose list is still pending."""
-        if model.official_languages == "pending":
-            raise SystemExit(
-                f"{model.name}: official_languages is pending; fill it from the model card first"
-            )
-        if model.official_languages == "all":
-            return frozenset(corpus_languages(self.inventory.corpus_rows))
-        return frozenset(model.official_languages)
+        """Every corpus language: all models run the same language set, so results compare per language."""
+        if not model.enabled:
+            raise SystemExit(f"{model.name}: disabled in its config")
+        return frozenset(corpus_languages(self.inventory.corpus_rows))
 
     def plan(self, model: ModelConfig, benchmarks: list[str] | None = None) -> list[WorkItem]:
         names = benchmarks or sorted(self.benchmarks)

@@ -32,7 +32,7 @@ def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
     grid: dict[str, dict[str, Cell]] = {}
     for name, model in project.models.items():
         cells: dict[str, Cell] = {}
-        if model.official_languages != "pending":
+        if model.enabled:
             shards = build_shards(name, project.plan(model))
             for benchmark in project.benchmarks:
                 own = [s for s in shards if s.benchmark == benchmark]

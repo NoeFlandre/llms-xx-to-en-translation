@@ -116,7 +116,7 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
     """Incomplete (model, benchmark) work, with what a placement needs to know about it."""
     grouped: dict[tuple[str, str], list[int]] = {}
     for name, model in project.models.items():
-        if model.official_languages == "pending":
+        if not model.enabled:
             continue
         for shard in build_shards(name, project.plan(model)):
             counts = grouped.setdefault((name, shard.benchmark), [0, 0])

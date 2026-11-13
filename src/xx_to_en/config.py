@@ -29,6 +29,7 @@ class ModelConfig(BaseModel):
     gpu_memory_gb_min: int = Field(gt=0)
     trust_remote_code: bool
     fp16_ok: bool = False  # safe to run in float16 on Turing GPUs (no bf16)
+    enabled: bool = True  # False keeps a model out of planning (blocked, not yet runnable)
     official_languages: list[str] | Literal["pending", "all"]
 
 

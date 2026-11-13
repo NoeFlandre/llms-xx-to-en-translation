@@ -14,7 +14,7 @@ Benchmarks are only the existing public test sets listed in the README. No new t
 
 ## Protocol (planned)
 
-- Each model runs only on the languages its model card officially supports.
+Every model runs every corpus language covered by a benchmark, so per-language results compare directly; the official language lists in the configs are reference only.
 - Official prompt format for each model family; greedy decoding; thinking disabled.
 - Fixed seeds; `max_new_tokens` tied to source length (see `xx_to_en.lengths`).
 - Every output is cached under a content hash of its inputs (model, prompt, decoding, source text).

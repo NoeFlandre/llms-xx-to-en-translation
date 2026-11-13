@@ -14,3 +14,4 @@ gpu_memory_gb_min: 8
 trust_remote_code: true
 official_languages: pending  # blocked: vLLM 0.33 cannot run LFM3 (its conv layers are unsupported)
 fp16_ok: true
+enabled: false
