@@ -12,7 +12,7 @@ tags:
 # llms-xx-to-en-translation
 
 Open models translating GeoReSeT corpus languages into English.
-[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 16:51 CET
+[Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated 2026-11-13 17:37 CET
 
 ## Progress
 
@@ -26,12 +26,12 @@ Open models translating GeoReSeT corpus languages into English.
 | hy-mt2-7b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | lfm3-1.7b | — | — | — | — | — |
 | madlad400-10b-mt | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| madlad400-3b-mt | ███░░░ 5/11 | █░░░░░ 1/10 | ██████ 1/1 | ██████ 1/1 | ██░░░░ 3/8 |
-| nllb-200-3.3b | █░░░░░ 1/11 | ░░░░░░ 0/10 | ██████ 1/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| plamo-3-translate-2b | ██░░░░ 4/11 | █░░░░░ 1/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ██░░░░ 2/8 |
+| madlad400-3b-mt | █████░ 9/11 | █░░░░░ 2/10 | ██████ 1/1 | ██████ 1/1 | ███░░░ 4/8 |
+| nllb-200-3.3b | █░░░░░ 1/11 | ░░░░░░ 0/10 | ██████ 1/1 | ██████ 1/1 | ░░░░░░ 0/8 |
+| plamo-3-translate-2b | ████░░ 7/11 | ██░░░░ 3/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ███░░░ 4/8 |
 | plamo-3-translate-8b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | qwen3.8-27b | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
-| tiny-aya-global | █████░ 9/11 | ██░░░░ 3/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
+| tiny-aya-global | ██████ 11/11 | █████░ 8/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | █░░░░░ 1/8 |
 | translategemma-12b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | translategemma-27b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
 | translategemma-4b-it | ░░░░░░ 0/11 | ░░░░░░ 0/10 | ░░░░░░ 0/1 | ░░░░░░ 0/1 | ░░░░░░ 0/8 |
@@ -40,27 +40,29 @@ Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
 ## Results
 
-Overall chrF++ uses the 40 languages every scored model covers.
+Overall chrF++ uses the 0 languages every scored model covers.
 
 | Model | chrF++ ↑ | Volume-weighted chrF++ ↑ | COMET-22 ↑ | MetricX-24 ↓ | Failures | Segments |
 |---|---:|---:|---:|---:|---:|---:|
-| madlad400-3b-mt | 59.0 | 63.1 | 0.852 | 3.64 | 5.4% | 40,480 |
+| madlad400-3b-mt | 58.8 | 0.0 | 0.855 | 3.74 | 3.9% | 88,840 |
+| nllb-200-3.3b | 44.7 | 0.0 | 0.710 | 5.25 | 21.9% | 8,323 |
+| tiny-aya-global | 51.1 | 0.0 | 0.821 | 5.45 | 1.6% | 15,976 |
 
 <details><summary>Best model per language</summary>
 
 | Language | Model | chrF++ |
 |---|---|---:|
-| afr_Latn | madlad400-3b-mt | 75.1 |
-| als_Latn | madlad400-3b-mt | 64.7 |
-| amh_Ethi | madlad400-3b-mt | 55.7 |
-| arb_Arab | madlad400-3b-mt | 64.3 |
-| azj_Latn | madlad400-3b-mt | 40.4 |
-| bel_Cyrl | madlad400-3b-mt | 39.4 |
-| ben_Beng | madlad400-3b-mt | 58.3 |
-| bul_Cyrl | madlad400-3b-mt | 65.3 |
+| afr_Latn | madlad400-3b-mt | 73.8 |
+| als_Latn | madlad400-3b-mt | 63.5 |
+| amh_Ethi | madlad400-3b-mt | 50.0 |
+| arb_Arab | madlad400-3b-mt | 60.1 |
+| azj_Latn | tiny-aya-global | 43.9 |
+| bel_Cyrl | tiny-aya-global | 49.8 |
+| ben_Beng | madlad400-3b-mt | 57.1 |
+| bul_Cyrl | madlad400-3b-mt | 61.3 |
 | cat_Latn | madlad400-3b-mt | 69.2 |
 | ceb_Latn | madlad400-3b-mt | 50.4 |
-| ces_Latn | madlad400-3b-mt | 64.1 |
+| ces_Latn | nllb-200-3.3b | 65.6 |
 | ckb_Arab | madlad400-3b-mt | 49.7 |
 | cmn_Hani | madlad400-3b-mt | 55.7 |
 | cym_Latn | madlad400-3b-mt | 74.4 |
@@ -90,6 +92,38 @@ Overall chrF++ uses the 40 languages every scored model covers.
 | jpn_Jpan | madlad400-3b-mt | 54.2 |
 | kan_Knda | madlad400-3b-mt | 56.3 |
 | kat_Geor | madlad400-3b-mt | 38.9 |
+| kaz_Cyrl | madlad400-3b-mt | 54.2 |
+| khk_Cyrl | madlad400-3b-mt | 52.2 |
+| khm_Khmr | madlad400-3b-mt | 57.6 |
+| kir_Cyrl | madlad400-3b-mt | 40.3 |
+| kmr_Latn | madlad400-3b-mt | 51.2 |
+| kor_Hang | madlad400-3b-mt | 56.0 |
+| lit_Latn | madlad400-3b-mt | 58.5 |
+| lvs_Latn | madlad400-3b-mt | 62.4 |
+| mal_Mlym | madlad400-3b-mt | 54.3 |
+| mar_Deva | madlad400-3b-mt | 58.1 |
+| mkd_Cyrl | madlad400-3b-mt | 66.0 |
+| mlt_Latn | madlad400-3b-mt | 75.1 |
+| mya_Mymr | madlad400-3b-mt | 53.3 |
+| nld_Latn | madlad400-3b-mt | 58.7 |
+| nno_Latn | madlad400-3b-mt | 67.5 |
+| nob_Latn | madlad400-3b-mt | 74.3 |
+| npi_Deva | madlad400-3b-mt | 61.1 |
+| pan_Guru | madlad400-3b-mt | 61.4 |
+| pbt_Arab | madlad400-3b-mt | 54.5 |
+| plt_Latn | madlad400-3b-mt | 52.8 |
+| pol_Latn | madlad400-3b-mt | 56.1 |
+| por_Latn | madlad400-3b-mt | 71.0 |
+| ron_Latn | madlad400-3b-mt | 67.5 |
+| rus_Cyrl | madlad400-3b-mt | 61.4 |
+| sin_Sinh | madlad400-3b-mt | 56.2 |
+| slk_Latn | madlad400-3b-mt | 64.1 |
+| slv_Latn | madlad400-3b-mt | 60.6 |
+| spa_Latn | madlad400-3b-mt | 58.6 |
+| srp_Cyrl | madlad400-3b-mt | 65.1 |
+| swe_Latn | madlad400-3b-mt | 69.4 |
+| tam_Taml | madlad400-3b-mt | 53.7 |
+| tel_Telu | madlad400-3b-mt | 60.2 |
 
 </details>
 
