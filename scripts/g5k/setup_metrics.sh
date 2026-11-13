@@ -1,35 +1,41 @@
 #!/usr/bin/env bash
-# Metrics environment for COMET-22, MetricX-24 and GlotLID.
-# Kept separate from the generation venv: MetricX pins transformers 4.30.2, which vLLM cannot run with.
+# Metrics environment for COMET-22, MetricX-24 and GlotLID, on Python 3.12.
+# unbabel-comet 2.2.7 pins numpy<2, and numpy 1.x has no Python 3.13 wheels, so this venv uses 3.12.
+# uv downloads that interpreter. The generation venv (vLLM, Python 3.13) stays separate.
 # Run inside an OAR job, not on a frontend:
 #
-#   oarsub -n xx2en-metrics-setup -l nodes=1,walltime=0:45 \
+#   oarsub -n xx2en-metrics-setup -l nodes=1,walltime=0:50 \
 #     "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/setup_metrics.sh"
 set -euo pipefail
 
 SRC="${SRC:-$HOME/src/llms-xx-to-en-translation}"
 VENV="${VENV:-$HOME/venvs/metrics}"
-export PIP_CACHE_DIR="/tmp/pip-cache-${USER}"
+BOOT="${BOOT:-$HOME/venvs/uv-bootstrap}"
+export UV_CACHE_DIR="/tmp/uv-cache-${USER}"
 
 echo "node: $(hostname)  python: $(python3 --version)"
-if [ ! -x "$VENV/bin/python" ]; then
-  python3 -m venv "$VENV"
+if [ ! -x "$BOOT/bin/uv" ]; then
+  python3 -m venv "$BOOT"
+  "$BOOT/bin/pip" install --quiet uv
 fi
-"$VENV/bin/pip" install --quiet --upgrade pip
-# Constraint applies to build-isolated sdist builds too: some sdists import pkg_resources at build time.
-printf 'setuptools<80\npyarrow>=17,<18\n' > "$VENV/constraints.txt"
-# MetricX's requirements.txt pins transformers 4.30.2 and sentencepiece 0.1.99, which conflict with
-# COMET 2.2.7. The resolver's versions are used instead; the smoke scoring run verifies MetricX.
-"$VENV/bin/pip" install --quiet -c "$VENV/constraints.txt" \
+UV="$BOOT/bin/uv"
+
+# Rebuild from scratch: this venv only ever holds metric packages, and an old 3.13 one must not survive.
+rm -rf "$VENV"
+"$UV" venv --python 3.12 "$VENV"
+
+CONSTRAINTS="$VENV/constraints.txt"
+printf 'setuptools<80\npyarrow>=16,<18\n' > "$CONSTRAINTS"
+# torchmetrics (pinned by unbabel-comet) imports pkg_resources; setuptools<80 keeps it available.
+"$UV" pip install --python "$VENV/bin/python" -c "$CONSTRAINTS" \
   "unbabel-comet==2.2.7" \
   "fasttext-turbo==0.1.1" \
-  huggingface_hub \
-  datasets \
-  sentencepiece \
+  "huggingface_hub" \
+  "datasets>=2.19,<3" \
+  "sentencepiece" \
   "setuptools<80" \
-  "pyarrow>=17,<18" \
-  "datasets>=2.19,<3"  # numpy stays 1.x (torchmetrics 0.10.3 pins it); pyarrow must match
-"$VENV/bin/pip" install --quiet -e "$SRC"
-"$VENV/bin/pip" freeze > "$VENV/freeze.txt"
+  "pyarrow>=16,<18"
+"$UV" pip install --python "$VENV/bin/python" -e "$SRC"
+"$UV" pip freeze --python "$VENV/bin/python" > "$VENV/freeze.txt"
 echo "installed: $(wc -l < "$VENV/freeze.txt") packages; freeze at $VENV/freeze.txt"
-"$VENV/bin/python" -c "import comet, transformers, torch; print('comet ok; transformers', transformers.__version__, 'torch', torch.__version__)"
+"$VENV/bin/python" -c "import comet, transformers, torch, numpy; print('comet ok; transformers', transformers.__version__, 'torch', torch.__version__, 'numpy', numpy.__version__)"
