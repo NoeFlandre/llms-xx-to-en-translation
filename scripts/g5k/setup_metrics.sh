@@ -24,7 +24,9 @@ fi
   huggingface_hub \
   datasets \
   sentencepiece \
-  "setuptools<80"  # torchmetrics imports pkg_resources, removed in setuptools 80+
+  "setuptools<80" \
+  "pyarrow>=14,<17" \
+  "datasets>=2.19,<3"  # numpy stays 1.x (torchmetrics 0.10.3 pins it); pyarrow must match
 "$VENV/bin/pip" install --quiet -e "$SRC"
 "$VENV/bin/pip" freeze > "$VENV/freeze.txt"
 echo "installed: $(wc -l < "$VENV/freeze.txt") packages; freeze at $VENV/freeze.txt"
