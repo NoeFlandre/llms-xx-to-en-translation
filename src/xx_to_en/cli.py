@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ from xx_to_en.config import BenchmarkConfig, ModelConfig, load_benchmarks, load_
 from xx_to_en.coverage import build_coverage, render_markdown, summarize
 from xx_to_en.inventory import Inventory, load_inventory
 from xx_to_en.languages import LanguageMap, corpus_languages
+from xx_to_en.plan import build_shards, pending
 from xx_to_en.runner import WorkItem, plan_work
 
 
@@ -139,6 +141,74 @@ def run_command(project: Project, args: argparse.Namespace) -> str:
     return f"{len(items)} work items done"
 
 
+def work_command(project: Project, args: argparse.Namespace) -> str:
+    """Generation phase: translate the pending shards of one model, upload each, within the budget."""
+    from xx_to_en.cache import OutputCache
+    from xx_to_en.results_store import is_uploaded, shard_path, upload
+    from xx_to_en.runner import Decoding
+    from xx_to_en.worker import generate_shard, run_generation
+
+    started = time.monotonic()
+    model = project.model(args.model)
+    if model.access == "not_accepted":
+        raise SystemExit(f"{model.name}: access not accepted for this account")
+    shards = build_shards(model.name, project.plan(model))
+    todo = pending(shards, is_done=lambda shard: is_uploaded(args.results_repo, shard_path(shard)))
+    if not todo:
+        return f"{model.name}: nothing pending"
+    backend = make_backend(model, model.backend, seed=args.seed)
+    cache = OutputCache(args.work / "cache")
+    budget_s = max(0.0, args.budget_min * 60 - (time.monotonic() - started))
+
+    def generate(shard: Any) -> None:
+        out_file = args.work / "hyp" / shard_path(shard)
+        generate_shard(
+            shard,
+            model=model,
+            backend=backend,
+            cache=cache,
+            benchmarks=project.benchmarks,
+            language_map=project.language_map,
+            iso=project.language_map.iso639_1,
+            decoding=Decoding(seed=args.seed),
+            out_file=out_file,
+        )
+        upload(args.results_repo, out_file, shard_path(shard))
+        print(f"uploaded {shard_path(shard)}", flush=True)
+
+    finished = run_generation(todo, budget_s=budget_s, generate=generate)
+    return f"{model.name}: generated {len(finished)} of {len(todo)} pending shards"
+
+
+def score_command(project: Project, args: argparse.Namespace) -> str:
+    """Scoring phase: score each generated shard of one model that has no scores uploaded yet."""
+    from xx_to_en.results_store import is_uploaded, score_path, shard_path, upload
+    from xx_to_en.worker import score_shard
+
+    model = project.model(args.model)
+    scored = 0
+    for shard in build_shards(model.name, project.plan(model)):
+        hypotheses = args.work / "hyp" / shard_path(shard)
+        if not hypotheses.exists() or is_uploaded(args.results_repo, score_path(shard)):
+            continue
+        out_file = args.work / "scores" / score_path(shard)
+        score_shard(
+            hypotheses,
+            out_file,
+            shard=shard,
+            benchmarks=project.benchmarks,
+            language_map=project.language_map,
+            metricx_repo=args.metricx_repo,
+            work=args.work / "metricx",
+            comet_batch=args.comet_batch,
+            metricx_batch=args.metricx_batch,
+        )
+        upload(args.results_repo, out_file, score_path(shard))
+        scored += 1
+        print(f"uploaded {score_path(shard)}", flush=True)
+    return f"{model.name}: scored {scored} shards"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="xx2en", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -166,6 +236,25 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--seed", type=int, default=0)
             sub.add_argument("--out", default="outputs")
             sub.add_argument("--cache", default="cache")
+
+    work = commands.add_parser("work", help="translate pending shards of one model (generation environment)")
+    work.add_argument("--model", required=True)
+    work.add_argument("--results-repo", required=True)
+    work.add_argument("--work", type=Path, required=True)
+    work.add_argument("--budget-min", type=float, default=38.0, help="wall-clock budget for this job")
+    work.add_argument("--seed", type=int, default=0)
+    work.add_argument("--configs", type=Path, default=Path("configs"))
+    work.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
+
+    score = commands.add_parser("score", help="score generated shards of one model (metrics environment)")
+    score.add_argument("--model", required=True)
+    score.add_argument("--results-repo", required=True)
+    score.add_argument("--work", type=Path, required=True)
+    score.add_argument("--metricx-repo", type=Path, default=Path.home() / "src" / "metricx")
+    score.add_argument("--comet-batch", type=int, default=64)
+    score.add_argument("--metricx-batch", type=int, default=8)
+    score.add_argument("--configs", type=Path, default=Path("configs"))
+    score.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
     return parser
 
 
@@ -175,6 +264,10 @@ def main(argv: list[str] | None = None) -> int:
         print(check_configs(args.root))
     elif args.command == "coverage":
         print(write_coverage(args.configs, args.inventory, args.out))
+    elif args.command == "work":
+        print(work_command(Project(args.configs, args.inventory), args))
+    elif args.command == "score":
+        print(score_command(Project(args.configs, args.inventory), args))
     else:
         project = Project(args.configs, args.inventory)
         if args.command == "plan":

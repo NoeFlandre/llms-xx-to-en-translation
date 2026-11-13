@@ -6,12 +6,18 @@ from pathlib import Path
 
 from xx_to_en.plan import Shard
 
-RESULTS_PREFIX = "results"
+HYPOTHESES_PREFIX = "results"
+SCORES_PREFIX = "scores"
 
 
-def shard_path(shard: Shard, *, prefix: str = RESULTS_PREFIX) -> str:
-    """Repository path of a shard, e.g. ``results/tiny/flores_plus_devtest/flores_plus_devtest-000.jsonl``."""
+def shard_path(shard: Shard, *, prefix: str = HYPOTHESES_PREFIX) -> str:
+    """Repository path of a shard's hypotheses, e.g. ``results/<model>/<benchmark>/<shard>.jsonl``."""
     return f"{prefix}/{shard.model}/{shard.benchmark}/{shard.shard_id}.jsonl"
+
+
+def score_path(shard: Shard) -> str:
+    """Repository path of a shard's scores."""
+    return shard_path(shard, prefix=SCORES_PREFIX)
 
 
 def is_uploaded(repo_id: str, path: str) -> bool:
