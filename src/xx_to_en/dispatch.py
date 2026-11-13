@@ -16,8 +16,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 JOB_MINUTES = 60
-MAX_JOBS_PER_SITE = 12
-MAX_JOBS_TOTAL = 40
+MAX_JOBS_PER_SITE = 24
+MAX_JOBS_TOTAL = 60
 # Besteffort is granted, but the usage policy asks for staff contact before large-scale use: keep it modest.
 MAX_BESTEFFORT_JOBS = 4
 BOUNDARY_HOURS = (9, 19)
