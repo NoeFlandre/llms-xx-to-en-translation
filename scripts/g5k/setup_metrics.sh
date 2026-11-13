@@ -23,7 +23,8 @@ fi
   "fasttext-turbo==0.1.1" \
   huggingface_hub \
   datasets \
-  sentencepiece
+  sentencepiece \
+  "setuptools<80"  # torchmetrics imports pkg_resources, removed in setuptools 80+
 "$VENV/bin/pip" install --quiet -e "$SRC"
 "$VENV/bin/pip" freeze > "$VENV/freeze.txt"
 echo "installed: $(wc -l < "$VENV/freeze.txt") packages; freeze at $VENV/freeze.txt"
