@@ -93,3 +93,10 @@ def test_clean_output_drops_reasoning_blocks():
     assert clean_output("<|channel>thought\nplan<channel|>Hello world.") == "Hello world."
     assert clean_output("reasoning</think>Bonjour") == "Bonjour"
     assert clean_output("  plain output  ") == "plain output"
+
+
+def test_qwen_nothink_disables_thinking_in_the_chat_template():
+    backend = FakeBackend()
+    make_prompt("qwen_nothink", _segment("fra_Latn"), backend, ISO)
+    assert backend.last_chat_kwargs == {"enable_thinking": False}
+    assert backend.last_messages[0]["content"].startswith("Translate the following text into English")

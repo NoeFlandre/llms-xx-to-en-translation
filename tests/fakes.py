@@ -18,9 +18,11 @@ class FakeBackend:
     def __init__(self) -> None:
         self.generate_calls: list[int] = []
         self.last_messages: list[dict[str, Any]] = []
+        self.last_chat_kwargs: dict[str, Any] = {}
 
     def render_chat(self, messages: Sequence[dict[str, Any]], chat_kwargs: dict[str, Any]) -> str:
         self.last_messages = [dict(message) for message in messages]
+        self.last_chat_kwargs = dict(chat_kwargs)
         return "\n".join(f"{m['role']}: {m['content']}" for m in messages)
 
     def count_tokens(self, text: str) -> int:

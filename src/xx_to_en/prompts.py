@@ -12,6 +12,8 @@ Sources (see ``configs/models/*.yaml`` and the model cards):
 - ``madlad_tag``: ``<2xx>`` target prefix from the MADLAD card.
 - ``generic_chat``: no official translation prompt exists for these models; a plain instruction
   is rendered through the model's own chat template.
+- ``qwen_nothink``: ``generic_chat`` with ``enable_thinking=False``: the Qwen template then emits an
+  empty think block, without it the model reasons in the output and runs out of tokens.
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from collections.abc import Callable, Mapping
 from xx_to_en.backends import Backend, PromptInput
 from xx_to_en.benchmarks import Segment
 
-PROMPT_VERSION = "3"
+PROMPT_VERSION = "4"
 
 GENERIC_INSTRUCTION = "Translate the following text into English. Output only the translation.\n\n"
 HY_MT2_INSTRUCTION = (
@@ -43,6 +45,12 @@ Builder = Callable[[Segment, Backend, IsoLookup], PromptInput]
 def _generic_chat(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
     messages = [{"role": "user", "content": GENERIC_INSTRUCTION + segment.source}]
     return PromptInput(text=backend.render_chat(messages, {}))
+
+
+def _qwen_nothink(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
+    """Generic instruction with Qwen's thinking turned off; otherwise the model writes its reasoning out."""
+    messages = [{"role": "user", "content": GENERIC_INSTRUCTION + segment.source}]
+    return PromptInput(text=backend.render_chat(messages, {"enable_thinking": False}))
 
 
 def _translategemma_generic(segment: Segment) -> PromptInput:
@@ -96,6 +104,7 @@ def _madlad(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
 
 BUILDERS: dict[str, Builder] = {
     "generic_chat": _generic_chat,
+    "qwen_nothink": _qwen_nothink,
     "translategemma": _translategemma,
     "plamo3_translate": _plamo3,
     "hy_mt2": _hy_mt2,
