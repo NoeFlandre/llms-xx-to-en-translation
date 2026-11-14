@@ -12,7 +12,7 @@ stop strings end generation. Chat prompts are already rendered and must not get 
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -101,7 +101,14 @@ class VllmBackend:
     ) -> list[GenerationResult]:
         from vllm import SamplingParams  # ty: ignore[import-not-found]
 
-        prompts = [
+        prompts = self._token_prompts(inputs)
+        params = _sampling_params(SamplingParams, inputs, max_new_tokens)
+        outputs = self._llm.generate(prompts, params, use_tqdm=False)
+        return [_vllm_result(output.outputs[0]) for output in outputs]
+
+    def _token_prompts(self, inputs: Sequence[PromptInput]) -> list[dict[str, list[int]]]:
+        """Pre-tokenized prompts, each with its own special-token setting."""
+        return [
             {
                 "prompt_token_ids": self._tokenizer.encode(
                     item.text, add_special_tokens=item.add_special_tokens
@@ -109,23 +116,26 @@ class VllmBackend:
             }
             for item in inputs
         ]
-        params = [
-            SamplingParams(temperature=0.0, max_tokens=budget, stop=list(item.stop) or None)
-            for item, budget in zip(inputs, max_new_tokens, strict=True)
-        ]
-        outputs = self._llm.generate(prompts, params, use_tqdm=False)
-        results = []
-        for output in outputs:
-            completion = output.outputs[0]
-            results.append(
-                GenerationResult(
-                    text=clean_output(completion.text),
-                    output_tokens=len(completion.token_ids),
-                    raw_text=completion.text,
-                    finish_reason=completion.finish_reason or "",
-                )
-            )
-        return results
+
+
+def _sampling_params(
+    sampling_params: Callable[..., Any], inputs: Sequence[PromptInput], max_new_tokens: Sequence[int]
+) -> list[Any]:
+    """Greedy settings per prompt: temperature 0, its own token budget, and its stop strings."""
+    return [
+        sampling_params(temperature=0.0, max_tokens=budget, stop=list(item.stop) or None)
+        for item, budget in zip(inputs, max_new_tokens, strict=True)
+    ]
+
+
+def _vllm_result(completion: Any) -> GenerationResult:
+    """Result for one vLLM completion, with reasoning blocks removed from the text."""
+    return GenerationResult(
+        text=clean_output(completion.text),
+        output_tokens=len(completion.token_ids),
+        raw_text=completion.text,
+        finish_reason=completion.finish_reason or "",
+    )
 
 
 class TransformersBackend:
@@ -177,24 +187,32 @@ class TransformersBackend:
         return results
 
     def _generate_batch(self, batch: list[PromptInput], budget: int) -> list[GenerationResult]:
+        padded = self._tokenizer.pad({"input_ids": self._encode_batch(batch)}, return_tensors="pt").to("cuda")
+        kwargs = self._decoding_kwargs(budget)
+        with self._torch.no_grad():
+            output = self._model.generate(**padded, **kwargs)
+        return [self._decode_row(row, budget) for row in output]
+
+    def _encode_batch(self, batch: list[PromptInput]) -> list[Any]:
+        """Token ids per prompt. A prompt with a source language sets the tokenizer's ``src_lang``."""
         encoded = []
         for item in batch:
             if item.src_lang is not None:
                 self._tokenizer.src_lang = item.src_lang
             encoded.append(self._tokenizer(item.text, return_tensors="pt").input_ids[0])
-        padded = self._tokenizer.pad({"input_ids": encoded}, return_tensors="pt").to("cuda")
+        return encoded
+
+    def _decoding_kwargs(self, budget: int) -> dict[str, Any]:
         kwargs: dict[str, Any] = {"do_sample": False, "num_beams": 1, "max_new_tokens": budget}
         if self._force_target:
             kwargs["forced_bos_token_id"] = self._tokenizer.convert_tokens_to_ids(NLLB_TARGET)
-        with self._torch.no_grad():
-            output = self._model.generate(**padded, **kwargs)
-        results = []
-        for row in output:
-            token_ids = [int(token) for token in row if int(token) != self._tokenizer.pad_token_id]
-            text = self._tokenizer.decode(token_ids, skip_special_tokens=True).strip()
-            raw = self._tokenizer.decode(token_ids, skip_special_tokens=False)
-            finish = "length" if len(token_ids) >= budget else "stop"
-            results.append(
-                GenerationResult(text=text, output_tokens=len(token_ids), raw_text=raw, finish_reason=finish)
-            )
-        return results
+        return kwargs
+
+    def _decode_row(self, row: Any, budget: int) -> GenerationResult:
+        """One generated row as a result: padding dropped, text stripped, length-capped finish reason."""
+        pad_id = self._tokenizer.pad_token_id
+        token_ids = [int(token) for token in row if int(token) != pad_id]
+        text = self._tokenizer.decode(token_ids, skip_special_tokens=True).strip()
+        raw = self._tokenizer.decode(token_ids, skip_special_tokens=False)
+        finish = "length" if len(token_ids) >= budget else "stop"
+        return GenerationResult(text=text, output_tokens=len(token_ids), raw_text=raw, finish_reason=finish)

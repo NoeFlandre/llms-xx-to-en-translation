@@ -151,19 +151,40 @@ def score_shard(
 ) -> None:
     """Score one shard: chrF++ everywhere, COMET-22 and MetricX-24 where covered, GlotLID for every output."""
     from xx_to_en.metrics import segment_chrf_pp
-    from xx_to_en.scoring import comet_inputs, is_neural_covered, merge_scores, metricx_inputs, scatter
+    from xx_to_en.scoring import merge_scores
 
     rows = attach_text(
         read_table(hypothesis_file), segment_index(_all_segments(shard, benchmarks, language_map))
     )
-    neural = [is_neural_covered(language_map.iso639_1(row["corpus_lang"])) for row in rows]
+    neural = _neural_flags(rows, language_map)
+    comet, metricx = _neural_scores(rows, neural, scorers)
+    chrf = segment_chrf_pp(_column(rows, "hypothesis"), _column(rows, "reference"))
+    codes = scorers.glotlid(_column(rows, "hypothesis"))
+    merged = merge_scores(rows, chrf=chrf, comet=comet, metricx=metricx, codes=codes, neural=neural)
+    write_table(out_file, public_rows(merged))
+
+
+def _column(rows: Sequence[Mapping[str, Any]], key: str) -> list[Any]:
+    return [row[key] for row in rows]
+
+
+def _neural_flags(rows: Sequence[Mapping[str, Any]], language_map: LanguageMap) -> list[bool]:
+    """Per row: whether COMET-22 and MetricX-24 cover the row's source language."""
+    from xx_to_en.scoring import is_neural_covered
+
+    return [is_neural_covered(language_map.iso639_1(row["corpus_lang"])) for row in rows]
+
+
+def _neural_scores(
+    rows: Sequence[Mapping[str, Any]], neural: Sequence[bool], scorers: Scorers
+) -> tuple[list[float | None], list[float | None]]:
+    """COMET-22 and MetricX-24 scores at the covered rows, None at the others."""
+    from xx_to_en.scoring import comet_inputs, metricx_inputs, scatter
+
     covered = [row for row, flag in zip(rows, neural, strict=True) if flag]
     comet = scatter(scorers.comet(comet_inputs(covered)), neural)
     metricx = scatter(scorers.metricx(metricx_inputs(covered)), neural)
-    chrf = segment_chrf_pp([row["hypothesis"] for row in rows], [row["reference"] for row in rows])
-    codes = scorers.glotlid([row["hypothesis"] for row in rows])
-    merged = merge_scores(rows, chrf=chrf, comet=comet, metricx=metricx, codes=codes, neural=neural)
-    write_table(out_file, public_rows(merged))
+    return comet, metricx
 
 
 def _all_segments(

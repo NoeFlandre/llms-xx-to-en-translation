@@ -66,16 +66,31 @@ def plan_work(
     ``supported`` is the model's official language set in corpus codes. ``None`` means no restriction
     and is only used for planning, never for real runs (the caller must pass the official list).
     """
-    items = []
-    languages = sorted(set(corpus_langs))
+    languages = _allowed_languages(corpus_langs, supported)
+    items: list[WorkItem] = []
     for benchmark in benchmarks:
         available = inventory.available(benchmark)
-        for corpus_lang in languages:
-            if supported is not None and corpus_lang not in supported:
-                continue
-            bench_lang = language_map.benchmark_code(corpus_lang, benchmark)
-            if bench_lang and bench_lang in available:
-                items.append(WorkItem(benchmark, corpus_lang, bench_lang))
+        items.extend(_items_for(benchmark, languages, language_map, available))
+    return items
+
+
+def _allowed_languages(corpus_langs: Iterable[str], supported: frozenset[str] | None) -> list[str]:
+    """Sorted, distinct corpus codes, restricted to the model's official set when one is given."""
+    languages = sorted(set(corpus_langs))
+    if supported is None:
+        return languages
+    return [lang for lang in languages if lang in supported]
+
+
+def _items_for(
+    benchmark: str, languages: Sequence[str], language_map: LanguageMap, available: frozenset[str]
+) -> list[WorkItem]:
+    """Work items for one benchmark: languages with a non-empty benchmark code that the benchmark has."""
+    items = []
+    for corpus_lang in languages:
+        bench_lang = language_map.benchmark_code(corpus_lang, benchmark)
+        if bench_lang and bench_lang in available:
+            items.append(WorkItem(benchmark, corpus_lang, bench_lang))
     return items
 
 
@@ -110,44 +125,54 @@ def translate(
     iso: IsoLookup | None = None,
 ) -> list[Translation]:
     """Translate segments, reusing cached outputs and generating the rest in one batch."""
-    plan = []
-    for segment in segments:
-        budget = _budget(backend, segment.source, decoding)
-        key = _cache_key(model, model.prompt, decoding, segment, budget)
-        prompt = make_prompt(model.prompt, segment, backend, iso)
-        plan.append((segment, budget, key, prompt, cache.get(key)))
-    pending = [(segment, budget, key, prompt) for segment, budget, key, prompt, hit in plan if hit is None]
-    generated = _generate(pending, backend)
-    results = []
-    for segment, budget, key, prompt, hit in plan:
-        prompt_sha = hashlib.sha256(prompt.text.encode("utf-8")).hexdigest()
-        if hit is not None:
-            results.append(
-                Translation(
-                    segment,
-                    hit,
-                    output_tokens=0,
-                    cached=True,
-                    prompt_sha256=prompt_sha,
-                    max_new_tokens=budget,
-                )
-            )
-            continue
-        output = generated[key]
-        cache.put(key, output.text)
-        results.append(
-            Translation(
-                segment,
-                output.text,
-                output_tokens=output.output_tokens,
-                cached=False,
-                raw_text=output.raw_text,
-                finish_reason=output.finish_reason,
-                prompt_sha256=prompt_sha,
-                max_new_tokens=budget,
-            )
+    plan = [_plan_segment(segment, model, backend, cache, decoding, iso) for segment in segments]
+    generated = _generate(_pending(plan), backend)
+    return [_finish(entry, generated, cache) for entry in plan]
+
+
+# One planned segment: (segment, token budget, cache key, prompt, cached output or None).
+_Planned = tuple[Segment, int, str, PromptInput, str | None]
+
+
+def _plan_segment(
+    segment: Segment,
+    model: ModelConfig,
+    backend: Backend,
+    cache: OutputCache,
+    decoding: Decoding,
+    iso: IsoLookup | None,
+) -> _Planned:
+    budget = _budget(backend, segment.source, decoding)
+    key = _cache_key(model, model.prompt, decoding, segment, budget)
+    prompt = make_prompt(model.prompt, segment, backend, iso)
+    return segment, budget, key, prompt, cache.get(key)
+
+
+def _pending(plan: Sequence[_Planned]) -> list[tuple[Segment, int, str, PromptInput]]:
+    """Planned segments with no cached output, in plan order."""
+    return [(segment, budget, key, prompt) for segment, budget, key, prompt, hit in plan if hit is None]
+
+
+def _finish(entry: _Planned, generated: dict[str, GenerationResult], cache: OutputCache) -> Translation:
+    """Build the translation for one planned segment, storing fresh outputs in the cache."""
+    segment, budget, key, prompt, hit = entry
+    prompt_sha = hashlib.sha256(prompt.text.encode("utf-8")).hexdigest()
+    if hit is not None:
+        return Translation(
+            segment, hit, output_tokens=0, cached=True, prompt_sha256=prompt_sha, max_new_tokens=budget
         )
-    return results
+    output = generated[key]
+    cache.put(key, output.text)
+    return Translation(
+        segment,
+        output.text,
+        output_tokens=output.output_tokens,
+        cached=False,
+        raw_text=output.raw_text,
+        finish_reason=output.finish_reason,
+        prompt_sha256=prompt_sha,
+        max_new_tokens=budget,
+    )
 
 
 def _generate(

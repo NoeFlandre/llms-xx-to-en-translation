@@ -5,6 +5,7 @@ import pytest
 from xx_to_en.dispatch import (
     MAX_BESTEFFORT_JOBS,
     MAX_JOBS_PER_SITE,
+    MAX_JOBS_TOTAL,
     GpuPool,
     Pending,
     choose_placements,
@@ -123,6 +124,26 @@ def test_batch_is_limited_by_free_gpus():
         [Pending("m|b", 24, jobs=5)], pools, running_models=frozenset(), running_per_site={}
     )
     assert len(placements) == 2
+
+
+def test_total_cap_counts_running_jobs_and_stops_mid_batch():
+    pools = [_pool("nancy", "gres", 96, 30)]
+    placements = choose_placements(
+        [Pending("m|b", 24, jobs=10)], pools, running_models=frozenset(), running_per_site={"sophia": 55}
+    )
+    assert len(placements) == MAX_JOBS_TOTAL - 55
+
+
+def test_running_besteffort_jobs_count_toward_the_besteffort_cap():
+    pools = [GpuPool("sophia", "esterel36", 40, 20, True, besteffort=True)]
+    placements = choose_placements(
+        [Pending("m", 8)],
+        pools,
+        running_models=frozenset(),
+        running_per_site={},
+        running_besteffort=MAX_BESTEFFORT_JOBS,
+    )
+    assert placements == []
 
 
 def test_jobs_for_pair_scales_with_pending_items():

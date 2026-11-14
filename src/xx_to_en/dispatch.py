@@ -74,6 +74,73 @@ def crosses_boundary(start: datetime, minutes: int = JOB_MINUTES) -> bool:
     return False
 
 
+@dataclass
+class _Budget:
+    """Running counts for one ``choose_placements`` call: free GPUs, jobs per site and in total."""
+
+    free: dict[tuple[str, str], int]
+    per_site: dict[str, int]
+    total: int
+    besteffort_total: int
+
+    def has_room(self, pool: GpuPool) -> bool:
+        """True when ``pool`` has a free GPU and neither its site nor the besteffort cap is full."""
+        return (
+            self.free[(pool.site, pool.cluster)] > 0
+            and self.per_site.get(pool.site, 0) < MAX_JOBS_PER_SITE
+            and (not pool.besteffort or self.besteffort_total < MAX_BESTEFFORT_JOBS)
+        )
+
+    def take(self, pool: GpuPool) -> None:
+        """Count one more job on ``pool``."""
+        self.free[(pool.site, pool.cluster)] -= 1
+        self.per_site[pool.site] = self.per_site.get(pool.site, 0) + 1
+        self.total += 1
+        self.besteffort_total += pool.besteffort
+
+
+def _fits(pool: GpuPool, item: Pending) -> bool:
+    """True when the model fits in the GPU memory and the GPU's dtype suits the model."""
+    return pool.memory_gb >= item.memory_gb and (pool.bf16 or item.fp16_ok)
+
+
+def _preference(pool: GpuPool) -> tuple[bool, bool, int, str, str]:
+    """Sort key, smallest first: default queue, then bf16, then the smallest GPU so large ones stay free."""
+    return (pool.besteffort, not pool.bf16, pool.memory_gb, pool.site, pool.cluster)
+
+
+def _eligible(item: Pending, pools: Sequence[GpuPool], budget: _Budget) -> list[GpuPool]:
+    """Pools that fit the model and still have room for one more job."""
+    return [pool for pool in pools if _fits(pool, item) and budget.has_room(pool)]
+
+
+def _placement(item: Pending, pool: GpuPool, slot: int) -> Placement:
+    return Placement(
+        item.model,
+        pool.site,
+        pool.cluster,
+        "bfloat16" if pool.bf16 else "float16",
+        "besteffort" if pool.besteffort else "default",
+        slot,
+        item.jobs,
+    )
+
+
+def _place_batch(item: Pending, pools: Sequence[GpuPool], budget: _Budget) -> list[Placement]:
+    """Place up to ``item.jobs`` jobs for one model, one per slot, until a cap or the pools stop it."""
+    placements: list[Placement] = []
+    for slot in range(item.jobs):
+        if budget.total >= MAX_JOBS_TOTAL:
+            break
+        options = _eligible(item, pools, budget)
+        if not options:
+            break
+        best = min(options, key=_preference)
+        placements.append(_placement(item, best, slot))
+        budget.take(best)
+    return placements
+
+
 def choose_placements(
     pending: Sequence[Pending],
     pools: Sequence[GpuPool],
@@ -89,37 +156,14 @@ def choose_placements(
     are preferred, then the smallest GPU that fits, so large GPUs stay free for large models. Turing
     GPUs only take fp16-tolerant models.
     """
-    free = {(pool.site, pool.cluster): pool.free for pool in pools}
-    per_site = dict(running_per_site)
-    total = sum(per_site.values())
-    besteffort_total = running_besteffort
+    budget = _Budget(
+        free={(pool.site, pool.cluster): pool.free for pool in pools},
+        per_site=dict(running_per_site),
+        total=sum(running_per_site.values()),
+        besteffort_total=running_besteffort,
+    )
     placements: list[Placement] = []
     for item in pending:
-        if item.model in running_models:
-            continue
-        for slot in range(item.jobs):
-            if total >= MAX_JOBS_TOTAL:
-                return placements
-            options = [
-                pool
-                for pool in pools
-                if pool.memory_gb >= item.memory_gb
-                and free[(pool.site, pool.cluster)] > 0
-                and per_site.get(pool.site, 0) < MAX_JOBS_PER_SITE
-                and (pool.bf16 or item.fp16_ok)
-                and (not pool.besteffort or besteffort_total < MAX_BESTEFFORT_JOBS)
-            ]
-            if not options:
-                break
-            best = min(
-                options,
-                key=lambda pool: (pool.besteffort, not pool.bf16, pool.memory_gb, pool.site, pool.cluster),
-            )
-            dtype = "bfloat16" if best.bf16 else "float16"
-            queue = "besteffort" if best.besteffort else "default"
-            besteffort_total += best.besteffort
-            placements.append(Placement(item.model, best.site, best.cluster, dtype, queue, slot, item.jobs))
-            free[(best.site, best.cluster)] -= 1
-            per_site[best.site] = per_site.get(best.site, 0) + 1
-            total += 1
+        if item.model not in running_models:
+            placements.extend(_place_batch(item, pools, budget))
     return placements

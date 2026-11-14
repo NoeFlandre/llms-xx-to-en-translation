@@ -38,6 +38,35 @@ def _load_metricx(repo: Path) -> tuple[Any, Any, Any]:
     return tokenizer, model, device
 
 
+def _metricx_rows(inputs: Sequence[dict[str, str]], tokenizer: Any, max_length: int) -> list[list[int]]:
+    """Token ids per input as upstream builds them: the tokenized text without its final token."""
+    return [
+        tokenizer(metricx_text(row), max_length=max_length, truncation=True, padding=False)["input_ids"][:-1]
+        for row in inputs
+    ]
+
+
+def _length_batches(rows: Sequence[Sequence[int]], batch_size: int) -> list[list[int]]:
+    """Row indices ordered by token length, cut into consecutive batches of ``batch_size``."""
+    order = sorted(range(len(rows)), key=lambda index: len(rows[index]))
+    return [order[start : start + batch_size] for start in range(0, len(order), batch_size)]
+
+
+def _metricx_predictions(
+    model: Any, tokenizer: Any, device: Any, rows: Sequence[Sequence[int]], chunk: Sequence[int]
+) -> list[float]:
+    """MetricX regression outputs for the rows at the indices in ``chunk``, padded to a common length."""
+    import torch  # ty: ignore[import-not-found]
+
+    ids, masks = pad_sequences([rows[index] for index in chunk], tokenizer.pad_token_id)
+    output = model(
+        input_ids=torch.tensor(ids, device=device),
+        attention_mask=torch.tensor(masks, device=device),
+        use_cache=False,  # the decoder cache breaks this upstream model on transformers 4.57
+    )
+    return output.predictions.float().cpu().tolist()
+
+
 class Scorers:
     """Lazy, load-once metric models shared by every shard of a job."""
 
@@ -76,29 +105,21 @@ class Scorers:
             return []
         import torch  # ty: ignore[import-not-found]
 
-        if self._metricx is None:
-            self._metricx = _load_metricx(self._metricx_repo)
-        tokenizer, model, device = self._metricx
-        rows = [
-            tokenizer(metricx_text(row), max_length=self._max_input_length, truncation=True, padding=False)[
-                "input_ids"
-            ][:-1]
-            for row in inputs
-        ]
-        order = sorted(range(len(rows)), key=lambda index: len(rows[index]))
+        tokenizer, model, device = self._metricx_components()
+        rows = _metricx_rows(inputs, tokenizer, self._max_input_length)
         scores = [0.0] * len(rows)
         with torch.no_grad():
-            for start in range(0, len(order), self._metricx_batch):
-                chunk = order[start : start + self._metricx_batch]
-                ids, masks = pad_sequences([rows[index] for index in chunk], tokenizer.pad_token_id)
-                output = model(
-                    input_ids=torch.tensor(ids, device=device),
-                    attention_mask=torch.tensor(masks, device=device),
-                    use_cache=False,  # the decoder cache breaks this upstream model on transformers 4.57
-                )
-                for index, value in zip(chunk, output.predictions.float().cpu().tolist(), strict=True):
+            for chunk in _length_batches(rows, self._metricx_batch):
+                predictions = _metricx_predictions(model, tokenizer, device, rows, chunk)
+                for index, value in zip(chunk, predictions, strict=True):
                     scores[index] = float(value)
         return scores
+
+    def _metricx_components(self) -> tuple[Any, Any, Any]:
+        """Tokenizer, model and device for MetricX, loaded on first use."""
+        if self._metricx is None:
+            self._metricx = _load_metricx(self._metricx_repo)
+        return self._metricx
 
     def glotlid(self, texts: Sequence[str]) -> list[str]:
         """Detected language per text as corpus-style codes (``eng_Latn``). Empty texts give ``""``."""
