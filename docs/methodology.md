@@ -16,9 +16,11 @@ Benchmarks are only the existing public test sets listed in the README. No new t
 
 Every model runs every corpus language covered by a benchmark, so per-language results compare directly; the official language lists in the configs are reference only.
 - Official prompt format for each model family; greedy decoding; thinking disabled.
-  TranslateGemma uses its own template for the languages it names by ISO 639-1 code; the ten corpus
-  languages without one (for example `ceb_Latn`, `ckb_Arab`) get the generic instruction. The prompt
-  hash in each row identifies which was used.
+  TranslateGemma uses its own template for every corpus language whose name its template lists. Some
+  corpus languages are script or macrolanguage variants, so they use a template tag (`prompt_code` in
+  `configs/languages.yaml`, e.g. `sr-Latn`; Sorani `ckb_Arab` uses `ku`, Cantonese `yue_Hani` uses
+  `zh-Hant-HK`, both approximate). `ceb_Latn` has no code in that list and gets the generic instruction.
+  The prompt hash in each row identifies which was used.
 - Fixed seeds; `max_new_tokens` tied to source length (see `xx_to_en.lengths`).
 - Every output is cached under a content hash of its inputs (model, prompt, decoding, source text).
 - Contamination risk is noted where a model card reports training on a benchmark.

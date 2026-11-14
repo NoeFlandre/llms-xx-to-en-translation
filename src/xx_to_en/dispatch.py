@@ -3,7 +3,7 @@
 Rules followed (Grid'5000 usage policy, default queue only):
 - A job of one hour or less is exempt from the daytime quota when submitted less than 10 minutes
   before it starts. Every job is one hour and is submitted only when its GPU is already free.
-- A job cannot cross 09:00 or 19:00. Checked on every day, stricter than the weekend rule.
+- A job cannot cross 09:00 or 19:00 on a working day. Weekends have no daytime boundary.
 - Jobs are spread over sites and capped per site and in total.
 
 Turing GPUs have no bf16: they take only models marked fp16_ok, and run them in float16.
@@ -50,13 +50,14 @@ class Placement:
 
 
 def crosses_boundary(start: datetime, minutes: int = JOB_MINUTES) -> bool:
-    """True when a job starting at ``start`` would straddle a 09:00 or 19:00 boundary."""
+    """True when a job starting at ``start`` would straddle a 09:00 or 19:00 boundary on a working day."""
     end = start + timedelta(minutes=minutes)
     day = start.replace(hour=0, minute=0, second=0, microsecond=0)
     while day <= end:
         for hour in BOUNDARY_HOURS:
             boundary = day.replace(hour=hour)
-            if start < boundary < end:
+            # Weekend days have no daytime boundary (weekend rule).
+            if boundary.weekday() < 5 and start < boundary < end:
                 return True
         day += timedelta(days=1)
     return False

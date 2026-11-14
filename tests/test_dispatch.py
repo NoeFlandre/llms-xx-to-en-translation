@@ -21,6 +21,9 @@ from xx_to_en.dispatch import (
         (datetime(2026, 11, 13, 9, 0), False),
         (datetime(2026, 11, 13, 18, 0), False),
         (datetime(2026, 11, 13, 19, 30), False),
+        (datetime(2026, 11, 13, 18, 30), True),
+        (datetime(2026, 11, 14, 8, 30), False),
+        (datetime(2026, 11, 15, 18, 30), False),
     ],
 )
 def test_crosses_boundary(start, expected):

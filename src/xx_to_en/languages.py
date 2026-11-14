@@ -43,3 +43,8 @@ class LanguageMap:
     def iso639_1(self, corpus_code: str) -> str | None:
         """ISO 639-1 code for a corpus language, or None when the language has none."""
         return self._mapping.get(corpus_code, {}).get("iso639_1") or None
+
+    def prompt_code(self, corpus_code: str) -> str | None:
+        """Language code a prompt template names: ``prompt_code`` when set, else the ISO 639-1 code."""
+        entry = self._mapping.get(corpus_code, {})
+        return entry.get("prompt_code") or entry.get("iso639_1") or None

@@ -131,7 +131,7 @@ def run_command(project: Project, args: argparse.Namespace) -> str:
             cache=cache,
             out_dir=out_dir,
             decoding=decoding,
-            iso=project.language_map.iso639_1,
+            iso=project.language_map.prompt_code,
         )
         lines.append(json.dumps(summary, ensure_ascii=False))
         print(lines[-1], flush=True)
@@ -184,7 +184,7 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
             cache=cache,
             benchmarks=project.benchmarks,
             language_map=project.language_map,
-            iso=project.language_map.iso639_1,
+            iso=project.language_map.prompt_code,
             decoding=decoding,
             out_file=out_file,
             run=run,

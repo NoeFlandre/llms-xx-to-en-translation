@@ -75,3 +75,12 @@ def test_disabled_model_is_refused():
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     with pytest.raises(SystemExit):
         project.supported_languages(project.model("lfm3-1.7b"))
+
+
+def test_every_corpus_language_has_a_prompt_code_except_cebuano():
+    from xx_to_en.cli import Project
+
+    project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
+    corpus = set(corpus_languages(project.inventory.corpus_rows))
+    missing = {code for code in corpus if project.language_map.prompt_code(code) is None}
+    assert missing == {"ceb_Latn"}

@@ -1,6 +1,8 @@
 # Corpus language config -> code used by each benchmark.
 # Missing benchmark key = same code is used (identity), e.g. fra_Latn -> fra_Latn.
 # Empty string = no equivalent variant in that benchmark (script or dialect mismatch).
+# prompt_code = the language code a prompt template names (TranslateGemma); defaults to iso639_1.
+# It is separate from iso639_1, which also decides which languages get COMET and MetricX scores.
 afr_Latn:
   iso639_1: af
 als_Latn:
@@ -12,6 +14,7 @@ amh_Ethi:
 arb_Arab:
   iso639_1: ar
 arb_Latn:
+  prompt_code: ar
   flores_plus_devtest: ''
 azj_Latn:
   iso639_1: az
@@ -22,6 +25,7 @@ bel_Cyrl:
 ben_Beng:
   iso639_1: bn
 ben_Latn:
+  prompt_code: bn
   flores_plus_devtest: ''
   ntrex_128: ''
   tatoeba_xen: ''
@@ -33,6 +37,8 @@ ces_Latn:
   iso639_1: cs
   wmt22_xen: cs
   wmt23_xen: cs
+ckb_Arab:
+  prompt_code: ku
 cmn_Hani:
   flores_plus_devtest: cmn_Hans
   iso639_1: zh
@@ -105,6 +111,7 @@ jpn_Jpan:
 kan_Knda:
   iso639_1: kn
 kan_Latn:
+  prompt_code: kn
   flores_plus_devtest: ''
   ntrex_128: ''
   tatoeba_xen: ''
@@ -140,6 +147,7 @@ mal_Mlym:
 mar_Deva:
   iso639_1: mr
 mar_Latn:
+  prompt_code: mr
   flores_plus_devtest: ''
   ntrex_128: ''
   tatoeba_xen: ''
@@ -190,6 +198,7 @@ spa_Latn:
 srp_Cyrl:
   iso639_1: sr
 srp_Latn:
+  prompt_code: sr-Latn
   flores_plus_devtest: ''
   tatoeba_xen: ''
 swe_Latn:
@@ -197,6 +206,7 @@ swe_Latn:
 tam_Taml:
   iso639_1: ta
 tel_Latn:
+  prompt_code: te
   flores_plus_devtest: ''
   ntrex_128: ''
   tatoeba_xen: ''
@@ -214,6 +224,7 @@ ukr_Cyrl:
 urd_Arab:
   iso639_1: ur
 uzn_Cyrl:
+  prompt_code: uz-Cyrl
   flores_plus_devtest: ''
   ntrex_128: ''
   tatoeba_xen: ''
@@ -231,6 +242,7 @@ ydd_Hebr:
 yor_Latn:
   iso639_1: yo
 yue_Hani:
+  prompt_code: zh-Hant-HK
   flores_plus_devtest: yue_Hant
   ntrex_128: yue_Hant
 zsm_Latn:

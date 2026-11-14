@@ -43,3 +43,13 @@ def test_explicit_mapping_overrides_default():
 def test_empty_string_means_no_equivalent():
     mapping = LanguageMap({"mar_Latn": {"flores_plus_devtest": ""}})
     assert mapping.benchmark_code("mar_Latn", "flores_plus_devtest") == ""
+
+
+def test_prompt_code_prefers_explicit_tag_then_iso_639_1():
+    mapping = LanguageMap(
+        {"srp_Latn": {"prompt_code": "sr-Latn"}, "fra_Latn": {"iso639_1": "fr"}, "ceb_Latn": {}}
+    )
+    assert mapping.prompt_code("srp_Latn") == "sr-Latn"
+    assert mapping.prompt_code("fra_Latn") == "fr"
+    assert mapping.prompt_code("ceb_Latn") is None
+    assert mapping.iso639_1("srp_Latn") is None
