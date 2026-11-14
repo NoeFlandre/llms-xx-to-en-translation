@@ -11,5 +11,6 @@ thinking: not_applicable
 dtype: bfloat16
 tensor_parallel: 1
 gpu_memory_gb_min: 16
+max_num_seqs: 128             # large vocabulary: the default 1024 sequences ran out of memory on 44 GB GPUs
 trust_remote_code: false
 official_languages: all  # card names 22+ languages; every corpus language is run
