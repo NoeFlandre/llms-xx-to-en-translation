@@ -10,7 +10,7 @@ The corpus is used only to understand what the text looks like. It is never tran
 
 | Part | State |
 |---|---|
-| Config schema and validation (17 models, 5 benchmarks) | done |
+| Config schema and validation (20 models, 5 benchmarks) | done |
 | Language × benchmark coverage matrix | done, see [docs/coverage_matrix.md](docs/coverage_matrix.md) |
 | Failure checks, paired bootstrap CIs, chrF++, volume-weighted aggregation | done, unit-tested |
 | Output cache (content-addressed) and generation budget | done |
@@ -58,7 +58,7 @@ reported with and without those sets.
 
 ## Models
 
-Seventeen candidates, one YAML each in [configs/models](configs/models). Selection criteria: stated support in the
+Twenty candidates, one YAML each in [configs/models](configs/models). Selection criteria: stated support in the
 requested families, runnable on one 96 GB GPU in bf16 (two-GPU runs excluded for now), and an accessible license.
 Gated repositories are included only where the account has access. The most recent dedicated MT model found is
 Hy-MT2 (2026); older MT models (Tower-Plus, Seed-X, Hunyuan-MT, EuroLLM) were not added.

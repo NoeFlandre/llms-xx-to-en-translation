@@ -1,0 +1,15 @@
+name: hy-mt15-1.8b
+hf_repo: tencent/HY-MT1.5-1.8B
+family: hy-mt
+params_b: 2.04
+active_params_b: 2.04
+license: not stated in the model repository
+access: open
+backend: vllm
+prompt: hy_mt15
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 16
+trust_remote_code: false
+official_languages: all  # card lists 33 major languages plus 5 variants; every corpus language is run

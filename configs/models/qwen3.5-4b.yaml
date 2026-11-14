@@ -1,0 +1,16 @@
+name: qwen3.5-4b
+hf_repo: Qwen/Qwen3.5-4B
+family: qwen-3.5
+params_b: 4.66
+active_params_b: 4.66
+license: apache-2.0
+access: open
+backend: vllm
+prompt: qwen_nothink
+thinking: "off"               # enable_thinking=false in the chat template
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 24
+max_num_seqs: 256             # linear-attention layers hold a state per sequence, as in qwen3.8-27b
+trust_remote_code: false
+official_languages: all  # card names no list; every corpus language the benchmark covers is run

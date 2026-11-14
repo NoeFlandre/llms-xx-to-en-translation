@@ -1,0 +1,15 @@
+name: tower-plus-2b
+hf_repo: Unbabel/Tower-Plus-2B
+family: tower-plus
+params_b: 2.61
+active_params_b: 2.61
+license: cc-by-nc-sa-4.0
+access: open
+backend: vllm
+prompt: generic_chat          # the card's language-name prompt needs names for every corpus language; generic instruction used instead
+thinking: not_applicable
+dtype: bfloat16
+tensor_parallel: 1
+gpu_memory_gb_min: 16
+trust_remote_code: false
+official_languages: all  # card names 22+ languages; every corpus language is run

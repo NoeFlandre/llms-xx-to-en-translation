@@ -20,7 +20,7 @@ BENCHMARK = "flores_plus_devtest"
 
 def test_check_configs_reports_counts():
     message = check_configs(ROOT / "configs")
-    assert message == "ok: 17 models, 5 benchmarks, languages.yaml"
+    assert message == "ok: 20 models, 5 benchmarks, languages.yaml"
 
 
 def test_coverage_command_writes_matrix(tmp_path, capsys):

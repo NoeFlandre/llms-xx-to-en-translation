@@ -12,6 +12,7 @@ Sources (see ``configs/models/*.yaml`` and the model cards):
 - ``madlad_tag``: ``<2xx>`` target prefix from the MADLAD card.
 - ``generic_chat``: no official translation prompt exists for these models; a plain instruction
   is rendered through the model's own chat template.
+- ``hy_mt15``: the instruction from the HY-MT1.5 model card, sent as one user message.
 - ``qwen_nothink``: ``generic_chat`` with ``enable_thinking=False``: the Qwen template then emits an
   empty think block, without it the model reasons in the output and runs out of tokens.
 """
@@ -23,7 +24,7 @@ from collections.abc import Callable, Mapping
 from xx_to_en.backends import Backend, PromptInput
 from xx_to_en.benchmarks import Segment
 
-PROMPT_VERSION = "4"
+PROMPT_VERSION = "5"
 
 GENERIC_INSTRUCTION = "Translate the following text into English. Output only the translation.\n\n"
 HY_MT2_INSTRUCTION = (
@@ -37,6 +38,7 @@ PLAMO_TEMPLATE = (
 )
 PLAMO_STOP = ("<|plamo:tag|>", "<|plamo:bos|>")
 MADLAD_TARGET_TAG = "<2en> "
+HY_MT15_INSTRUCTION = "Translate the following segment into English, without additional explanation.\n\n"
 
 IsoLookup = Callable[[str], str | None]
 Builder = Callable[[Segment, Backend, IsoLookup], PromptInput]
@@ -51,6 +53,11 @@ def _qwen_nothink(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptI
     """Generic instruction with Qwen's thinking turned off; otherwise the model writes its reasoning out."""
     messages = [{"role": "user", "content": GENERIC_INSTRUCTION + segment.source}]
     return PromptInput(text=backend.render_chat(messages, {"enable_thinking": False}))
+
+
+def _hy_mt15(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
+    messages = [{"role": "user", "content": HY_MT15_INSTRUCTION + segment.source}]
+    return PromptInput(text=backend.render_chat(messages, {}))
 
 
 def _translategemma_generic(segment: Segment) -> PromptInput:
@@ -105,6 +112,7 @@ def _madlad(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
 BUILDERS: dict[str, Builder] = {
     "generic_chat": _generic_chat,
     "qwen_nothink": _qwen_nothink,
+    "hy_mt15": _hy_mt15,
     "translategemma": _translategemma,
     "plamo3_translate": _plamo3,
     "hy_mt2": _hy_mt2,

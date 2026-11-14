@@ -10,7 +10,7 @@ CONFIGS = ROOT / "configs"
 
 def test_all_model_configs_validate():
     models = load_models(CONFIGS / "models")
-    assert len(models) == 17
+    assert len(models) == 20
     assert models["gemma-4-31b-it"].hf_repo == "google/gemma-4-31B-it"
     assert models["hy-mt2-30b-a3b"].active_params_b == 3.0
 
