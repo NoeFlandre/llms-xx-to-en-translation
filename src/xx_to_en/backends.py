@@ -72,6 +72,9 @@ class VllmBackend:
     ) -> None:
         from vllm import LLM  # ty: ignore[import-not-found]
 
+        engine_options: dict[str, int] = {}
+        if model.max_num_seqs is not None:
+            engine_options["max_num_seqs"] = model.max_num_seqs
         self._llm = LLM(
             model=model.hf_repo,
             dtype=dtype or model.dtype,
@@ -79,6 +82,7 @@ class VllmBackend:
             trust_remote_code=model.trust_remote_code,
             seed=seed,
             max_model_len=max_model_len,
+            **engine_options,
         )
         self._tokenizer = self._llm.get_tokenizer()
 
@@ -136,7 +140,7 @@ class TransformersBackend:
         model: ModelConfig,
         *,
         seed: int = 0,
-        batch_size: int = 32,
+        batch_size: int = 8,  # 32 ran out of memory on 15 GB and 44 GB GPUs (NLLB, PLaMo 8B, Gemma E4B)
         force_target_lang: bool = False,
         dtype: str | None = None,
     ) -> None:

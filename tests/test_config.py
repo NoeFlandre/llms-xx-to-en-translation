@@ -63,3 +63,29 @@ def test_language_map_values_must_be_strings(tmp_path: Path):
     path.write_text("fra_Latn:\n  flores_plus_devtest: 3\n", encoding="utf-8")
     with pytest.raises(ValueError, match="strings"):
         load_language_map(path)
+
+
+def test_max_num_seqs_is_optional_and_positive():
+    from xx_to_en.config import ModelConfig
+
+    base = {
+        "name": "m",
+        "hf_repo": "org/m",
+        "family": "f",
+        "params_b": 1,
+        "active_params_b": 1,
+        "license": "apache-2.0",
+        "access": "open",
+        "backend": "vllm",
+        "prompt": "generic_chat",
+        "thinking": "off",
+        "dtype": "bfloat16",
+        "tensor_parallel": 1,
+        "gpu_memory_gb_min": 80,
+        "trust_remote_code": False,
+        "official_languages": "all",
+    }
+    assert ModelConfig.model_validate(base).max_num_seqs is None
+    assert ModelConfig.model_validate({**base, "max_num_seqs": 256}).max_num_seqs == 256
+    with pytest.raises(ValueError):
+        ModelConfig.model_validate({**base, "max_num_seqs": 0})

@@ -5,6 +5,7 @@ Bump ``PROMPT_VERSION`` whenever any template changes: it is part of every cache
 Sources (see ``configs/models/*.yaml`` and the model cards):
 - ``translategemma``: the model's own chat template (``chat_template.jinja``): user content is a
   list with ``source_lang_code``, ``target_lang_code`` and ``text``; the template renders the prompt.
+  Corpus languages without an ISO 639-1 code (no name in that template) get ``generic_chat`` instead.
 - ``plamo3_translate``: the PFML3 format printed in the PLaMo 3 Translate card.
 - ``hy_mt2``: the "Default Translation" instruction from the Hy-MT2 card; markdown was removed.
 - ``nllb_tag``: source language tag on the tokenizer; target forced to eng_Latn by the backend.
@@ -20,7 +21,7 @@ from collections.abc import Callable, Mapping
 from xx_to_en.backends import Backend, PromptInput
 from xx_to_en.benchmarks import Segment
 
-PROMPT_VERSION = "2"
+PROMPT_VERSION = "3"
 
 GENERIC_INSTRUCTION = "Translate the following text into English. Output only the translation.\n\n"
 HY_MT2_INSTRUCTION = (
@@ -47,7 +48,9 @@ def _generic_chat(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptI
 def _translategemma(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
     source_code = iso(segment.corpus_lang)
     if not source_code:
-        raise ValueError(f"TranslateGemma has no ISO 639-1 code for {segment.corpus_lang}")
+        # The model's template names languages by ISO 639-1 code only; the other corpus languages
+        # (ben_Latn, ckb_Arab, ...) get the same generic instruction as the other models.
+        return _generic_chat(segment, backend, iso)
     content = [
         {
             "type": "text",

@@ -30,6 +30,8 @@ class ModelConfig(BaseModel):
     trust_remote_code: bool
     fp16_ok: bool = False  # safe to run in float16 on Turing GPUs (no bf16)
     enabled: bool = True  # False keeps a model out of planning (blocked, not yet runnable)
+    # vLLM batch cap; set where the default (1024) exceeds the model's cache capacity on an 80 GB GPU.
+    max_num_seqs: int | None = Field(default=None, gt=0)
     official_languages: list[str] | Literal["pending", "all"]
 
 

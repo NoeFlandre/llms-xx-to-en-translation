@@ -1,5 +1,3 @@
-import pytest
-
 from tests.fakes import FakeBackend
 from xx_to_en.backends import clean_output
 from xx_to_en.benchmarks import Segment
@@ -40,9 +38,12 @@ def test_translategemma_uses_codes_in_the_content_list():
     ]
 
 
-def test_translategemma_rejects_languages_without_iso_639_1():
-    with pytest.raises(ValueError, match="no ISO 639-1 code"):
-        make_prompt("translategemma", _segment("ceb_Latn"), FakeBackend(), ISO)
+def test_translategemma_falls_back_to_generic_prompt_without_iso_639_1():
+    backend = FakeBackend()
+    make_prompt("translategemma", _segment("ceb_Latn"), backend, ISO)
+    message = backend.last_messages[0]
+    assert message["content"].startswith("Translate the following text into English")
+    assert "Bonjour le monde." in message["content"]
 
 
 def test_plamo_raw_format_adds_bos_and_stop_strings():
@@ -82,8 +83,8 @@ def test_generic_chat_still_renders_an_instruction():
 
 def test_iso_lookup_may_be_a_mapping_or_missing():
     backend = FakeBackend()
-    with pytest.raises(ValueError):
-        make_prompt("translategemma", _segment("fra_Latn"), backend, {})
+    make_prompt("translategemma", _segment("fra_Latn"), backend, {})
+    assert backend.last_messages[0]["content"].startswith("Translate the following text into English")
     prompt = make_prompt("translategemma", _segment("fra_Latn"), backend, {"fra_Latn": "fr"})
     assert prompt.text
 
