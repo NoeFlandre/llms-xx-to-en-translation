@@ -283,12 +283,16 @@ def main(argv: list[str] | None = None) -> int:
     pools_config = load_pools(args.sites)
     state = load_state()
     while True:
-        cycle(project, pools_config, state, args.dry_run)
-        if args.dry_run:
-            return 0
-        if not pending_work(project, repo_files(REPO)):
-            print("all shards and scores are in the dataset", flush=True)
-            return 0
+        # A network blip (DNS, Hub, Grid'5000 frontend) must not stop the dispatcher: retry next cycle.
+        try:
+            cycle(project, pools_config, state, args.dry_run)
+            if args.dry_run:
+                return 0
+            if not pending_work(project, repo_files(REPO)):
+                print("all shards and scores are in the dataset", flush=True)
+                return 0
+        except Exception as error:
+            print(f"{datetime.now():%H:%M}: cycle failed, retrying in {POLL_S}s: {error!r}", flush=True)
         time.sleep(POLL_S)
 
 
