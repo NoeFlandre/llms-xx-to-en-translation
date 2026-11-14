@@ -52,10 +52,10 @@ def _length_batches(rows: Sequence[Sequence[int]], batch_size: int) -> list[list
     return [order[start : start + batch_size] for start in range(0, len(order), batch_size)]
 
 
-def _metricx_predictions(
+def _metricx_forward(
     model: Any, tokenizer: Any, device: Any, rows: Sequence[Sequence[int]], chunk: Sequence[int]
 ) -> list[float]:
-    """MetricX regression outputs for the rows at the indices in ``chunk``, padded to a common length."""
+    """One forward pass over the rows at the indices in ``chunk``, padded to a common length."""
     import torch  # ty: ignore[import-not-found]
 
     ids, masks = pad_sequences([rows[index] for index in chunk], tokenizer.pad_token_id)
@@ -65,6 +65,34 @@ def _metricx_predictions(
         use_cache=False,  # the decoder cache breaks this upstream model on transformers 4.57
     )
     return output.predictions.float().cpu().tolist()
+
+
+def _metricx_predictions(
+    model: Any, tokenizer: Any, device: Any, rows: Sequence[Sequence[int]], chunk: Sequence[int]
+) -> list[float]:
+    """MetricX regression outputs for the rows at the indices in ``chunk``.
+
+    A chunk that runs out of GPU memory is split in two and each half scored in turn. The scores do not
+    change: padding is masked, so a row scores the same whatever it is batched with.
+    """
+    try:
+        return _metricx_forward(model, tokenizer, device, rows, chunk)
+    except RuntimeError as error:
+        if "out of memory" not in str(error).lower() or len(chunk) == 1:
+            raise
+    # Outside the handler, so the failed batch's tensors are released before the halves run.
+    _release_gpu_memory()
+    middle = len(chunk) // 2
+    return [
+        *_metricx_predictions(model, tokenizer, device, rows, chunk[:middle]),
+        *_metricx_predictions(model, tokenizer, device, rows, chunk[middle:]),
+    ]
+
+
+def _release_gpu_memory() -> None:
+    import torch  # ty: ignore[import-not-found]
+
+    torch.cuda.empty_cache()
 
 
 class Scorers:

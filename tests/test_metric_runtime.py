@@ -71,6 +71,11 @@ class _FakeMetricXTokenizer:
         return {"input_ids": [*ids, 1]}
 
 
+_FAKE_TORCH = SimpleNamespace(
+    no_grad=nullcontext, tensor=_FakeTensor, cuda=SimpleNamespace(empty_cache=lambda: None)
+)
+
+
 def _row(extra_words: int) -> dict[str, str]:
     source = " ".join(["w"] * (extra_words + 1))
     return {"source": source, "hypothesis": "h", "reference": "r"}
@@ -86,9 +91,8 @@ def loaded(monkeypatch: pytest.MonkeyPatch) -> list[_FakeMetricXModel]:
         models.append(model)
         return _FakeMetricXTokenizer(), model, "cpu"
 
-    fake_torch = SimpleNamespace(no_grad=nullcontext, tensor=_FakeTensor)
     monkeypatch.setattr(metric_runtime, "_load_metricx", fake_load)
-    monkeypatch.setitem(sys.modules, "torch", fake_torch)
+    monkeypatch.setitem(sys.modules, "torch", _FAKE_TORCH)
     return models
 
 
@@ -130,6 +134,48 @@ def test_metricx_loads_the_model_once_and_reuses_it(loaded: list[_FakeMetricXMod
     scorers.metricx([_row(0)])
     scorers.metricx([_row(1)])
     assert len(loaded) == 1
+
+
+class _SmallGpuMetricXModel(_FakeMetricXModel):
+    """Runs out of memory for any batch of more than ``limit`` rows, as a busy GPU does."""
+
+    def __init__(self, limit: int, message: str = "CUDA out of memory. Tried to allocate 384 MiB") -> None:
+        super().__init__()
+        self.limit = limit
+        self.message = message
+
+    def __call__(self, *, input_ids: _FakeTensor, attention_mask: _FakeTensor, use_cache: bool) -> Any:
+        if len(attention_mask.data) > self.limit:
+            raise RuntimeError(self.message)
+        return super().__call__(input_ids=input_ids, attention_mask=attention_mask, use_cache=use_cache)
+
+
+def _use_model(monkeypatch: pytest.MonkeyPatch, model: _FakeMetricXModel) -> None:
+    monkeypatch.setattr(metric_runtime, "_load_metricx", lambda repo: (_FakeMetricXTokenizer(), model, "cpu"))
+    monkeypatch.setitem(sys.modules, "torch", _FAKE_TORCH)
+
+
+def test_metricx_splits_a_batch_that_runs_out_of_memory(monkeypatch: pytest.MonkeyPatch):
+    model = _SmallGpuMetricXModel(limit=1)
+    _use_model(monkeypatch, model)
+    inputs = [_row(extra) for extra in (3, 0, 2, 5)]
+
+    scores = _scorers(batch=4).metricx(inputs)
+
+    assert scores == [float(len(metricx_text(row).split())) for row in inputs]
+    assert model.batch_lengths and all(len(batch) == 1 for batch in model.batch_lengths)
+
+
+def test_metricx_reraises_out_of_memory_for_a_single_row(monkeypatch: pytest.MonkeyPatch):
+    _use_model(monkeypatch, _SmallGpuMetricXModel(limit=0))
+    with pytest.raises(RuntimeError, match="out of memory"):
+        _scorers(batch=1).metricx([_row(0)])
+
+
+def test_metricx_reraises_errors_that_are_not_out_of_memory(monkeypatch: pytest.MonkeyPatch):
+    _use_model(monkeypatch, _SmallGpuMetricXModel(limit=0, message="shape mismatch"))
+    with pytest.raises(RuntimeError, match="shape mismatch"):
+        _scorers(batch=4).metricx([_row(0), _row(1)])
 
 
 def test_length_batches_order_rows_by_length_before_cutting():
