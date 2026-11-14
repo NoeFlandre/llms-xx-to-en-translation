@@ -15,7 +15,7 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download
 
-from xx_to_en.card import Cell, ModelScore, progress_table, render, results_table, winners_table
+from xx_to_en.card import KNOWN_GAPS, Cell, ModelScore, progress_table, render, results_table, winners_table
 from xx_to_en.cli import Project
 from xx_to_en.languages import corpus_languages
 from xx_to_en.plan import build_shards
@@ -117,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         + results_table(summaries),
         winners_table(winners),
+        known_gaps=KNOWN_GAPS,
     )
     out = ROOT / "docs" / "dataset_card.md"
     out.write_text(card, encoding="utf-8")

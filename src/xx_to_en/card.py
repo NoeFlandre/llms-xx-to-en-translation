@@ -91,7 +91,15 @@ def winners_table(winners: Mapping[str, tuple[str, float]]) -> str:
     return "\n".join(lines)
 
 
-def render(updated: str, progress: str, results: str, winners: str) -> str:
+KNOWN_GAPS = (
+    "Tatoeba for NLLB-200 3.3B and MADLAD-400 3B is incomplete: their shards did not finish within the "
+    "one-hour job limit on the GPUs available, so those cells stay below their total. No results were "
+    "generated for the missing shards."
+)
+
+
+def render(updated: str, progress: str, results: str, winners: str, known_gaps: str = "") -> str:
+    gaps = f"## Known gaps\n\n{known_gaps}\n\n" if known_gaps else ""
     return f"""---
 license: cc-by-sa-4.0
 pretty_name: llms-xx-to-en-translation
@@ -114,7 +122,7 @@ Open models translating GeoReSeT corpus languages into English.
 
 Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
-## Results
+{gaps}## Results
 
 {results}
 

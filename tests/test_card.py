@@ -36,6 +36,13 @@ def test_winners_table_is_collapsible_and_sorted_by_language():
     assert table.index("deu_Latn") < table.index("fra_Latn")
 
 
+def test_render_lists_known_gaps_only_when_given():
+    assert "## Known gaps" not in render("now", "P", "R", "")
+    card = render("now", "P", "R", "", known_gaps="NLLB Tatoeba is missing.")
+    assert card.index("## Known gaps") < card.index("## Results")
+    assert "NLLB Tatoeba is missing." in card
+
+
 def test_render_has_front_matter_and_sections():
     card = render("2026-11-13 14:00 CET", "P", "R", "")
     assert card.startswith("---\nlicense: cc-by-sa-4.0")
