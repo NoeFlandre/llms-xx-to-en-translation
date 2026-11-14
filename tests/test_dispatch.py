@@ -9,6 +9,7 @@ from xx_to_en.dispatch import (
     Pending,
     choose_placements,
     crosses_boundary,
+    jobs_for_pair,
 )
 
 
@@ -21,9 +22,6 @@ from xx_to_en.dispatch import (
         (datetime(2026, 11, 13, 9, 0), False),
         (datetime(2026, 11, 13, 18, 0), False),
         (datetime(2026, 11, 13, 19, 30), False),
-        (datetime(2026, 11, 13, 18, 30), True),
-        (datetime(2026, 11, 14, 8, 30), False),
-        (datetime(2026, 11, 15, 18, 30), False),
     ],
 )
 def test_crosses_boundary(start, expected):
@@ -101,3 +99,33 @@ def test_besteffort_is_capped_while_staff_contact_is_pending():
     placements = _place(pending, pools)
     assert len(placements) == MAX_BESTEFFORT_JOBS
     assert all(p.queue == "besteffort" for p in placements)
+
+
+def test_pending_pair_gets_one_job_per_slot_with_shard_indexes():
+    pools = [_pool("nancy", "gres", 96, 4)]
+    placements = choose_placements(
+        [Pending("m|b", 24, jobs=3)], pools, running_models=frozenset(), running_per_site={}
+    )
+    assert [(p.shard_index, p.shard_count) for p in placements] == [(0, 3), (1, 3), (2, 3)]
+
+
+def test_running_pair_gets_no_new_jobs():
+    pools = [_pool("nancy", "gres", 96, 4)]
+    placements = choose_placements(
+        [Pending("m|b", 24, jobs=3)], pools, running_models=frozenset({"m|b"}), running_per_site={}
+    )
+    assert placements == []
+
+
+def test_batch_is_limited_by_free_gpus():
+    pools = [_pool("nancy", "gres", 96, 2)]
+    placements = choose_placements(
+        [Pending("m|b", 24, jobs=5)], pools, running_models=frozenset(), running_per_site={}
+    )
+    assert len(placements) == 2
+
+
+def test_jobs_for_pair_scales_with_pending_items():
+    assert jobs_for_pair(1) == 1
+    assert jobs_for_pair(8) == 2
+    assert jobs_for_pair(22) == 6

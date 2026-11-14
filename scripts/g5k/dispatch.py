@@ -25,7 +25,7 @@ from typing import Any
 import yaml
 
 from xx_to_en.cli import Project
-from xx_to_en.dispatch import GpuPool, Pending, choose_placements, crosses_boundary
+from xx_to_en.dispatch import GpuPool, Pending, choose_placements, crosses_boundary, jobs_for_pair
 from xx_to_en.gpu_probe import count_free
 from xx_to_en.plan import build_shards
 from xx_to_en.results_store import repo_files, score_path, shard_path
@@ -71,8 +71,20 @@ def cancel(site: str, job_id: int) -> None:
     ssh(site, f"oardel {job_id} >/dev/null 2>&1")
 
 
-def submit(site: str, cluster: str, model: str, benchmark: str, dtype: str, queue: str) -> int | None:
-    env = f"MODEL={model} BENCHMARK={benchmark} RESULTS_REPO={REPO} BUDGET_MIN=30 DTYPE={dtype}"
+def submit(
+    site: str,
+    cluster: str,
+    model: str,
+    benchmark: str,
+    dtype: str,
+    queue: str,
+    shard_index: int = 0,
+    shard_count: int = 1,
+) -> int | None:
+    env = (
+        f"MODEL={model} BENCHMARK={benchmark} RESULTS_REPO={REPO} BUDGET_MIN=30 DTYPE={dtype} "
+        f"SHARD_INDEX={shard_index} SHARD_COUNT={shard_count}"
+    )
     queue_flag = " -q besteffort" if queue == "besteffort" else ""
     command = (
         f"oarsub -n xx2en-{model}-{benchmark[:6]} -p \"cluster='{cluster}'\"{queue_flag} "
@@ -193,7 +205,16 @@ def launch(
         )
         if dry_run:
             continue
-        job_id = submit(placement.site, placement.cluster, model, benchmark, placement.dtype, placement.queue)
+        job_id = submit(
+            placement.site,
+            placement.cluster,
+            model,
+            benchmark,
+            placement.dtype,
+            placement.queue,
+            placement.shard_index,
+            placement.shard_count,
+        )
         if job_id is None:
             key = f"{placement.site}/{placement.cluster}"
             state["failures"][key] = state["failures"].get(key, 0) + 1
@@ -228,12 +249,12 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
             print(f"  cancelled untracked waiting job {job_id} on {entry}", flush=True)
     no_progress = state.get("no_progress", {})
     ready = sorted(
-        (info[2], key, info[0], info[3])
+        (info[2], key, info[0], info[3], info[1])
         for key, info in pending.items()
         if no_progress.get(key, 0) < MAX_NO_PROGRESS
     )
     placements = choose_placements(
-        [Pending(key, need, fp16) for _, key, need, fp16 in ready],
+        [Pending(key, need, fp16, jobs_for_pair(items)) for _, key, need, fp16, items in ready],
         build_pools(pools_config, state),
         running_models=frozenset(job["model"] for job in state["jobs"]),
         running_per_site=Counter(job["site"] for job in state["jobs"]),

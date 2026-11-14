@@ -22,6 +22,10 @@ WORK="/tmp/xx2en-${JOB}"
 
 BENCH_ARGS=()
 if [ -n "$BENCHMARK" ]; then BENCH_ARGS=(--benchmark "$BENCHMARK"); fi
+# Parallel jobs for one model split its shards by index; the work and score steps use the same split.
+SHARD_INDEX="${SHARD_INDEX:-0}"
+SHARD_COUNT="${SHARD_COUNT:-1}"
+SHARD_ARGS=(--shard-index "$SHARD_INDEX" --shard-count "$SHARD_COUNT")
 
 export HF_HOME="${WORK}/hf"
 export HF_TOKEN="$(cat "$HOME/.cache/huggingface/token")"
@@ -42,13 +46,13 @@ export CODE_COMMIT="$(git -C "$SRC" rev-parse HEAD)"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 "$GEN/bin/xx2en" work --model "$MODEL" --results-repo "$REPO" --work "$WORK" \
-  --budget-min "$BUDGET_MIN" --dtype "$DTYPE" "${BENCH_ARGS[@]}"
+  --budget-min "$BUDGET_MIN" --dtype "$DTYPE" "${BENCH_ARGS[@]}" "${SHARD_ARGS[@]}"
 
 if [ "$DTYPE" = "float16" ]; then
   echo "float16 GPU: scoring needs bf16 and is left for a bf16 node"
 elif [ -x "$MET/bin/xx2en" ]; then
   "$MET/bin/xx2en" score --model "$MODEL" --results-repo "$REPO" --work "$WORK" \
-    --metricx-repo "$HOME/src/metricx" --budget-min "$SCORE_BUDGET_MIN" "${BENCH_ARGS[@]}"
+    --metricx-repo "$HOME/src/metricx" --budget-min "$SCORE_BUDGET_MIN" "${BENCH_ARGS[@]}" "${SHARD_ARGS[@]}"
 else
   echo "metrics environment missing at $MET: scoring skipped"
 fi

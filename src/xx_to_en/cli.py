@@ -158,6 +158,7 @@ def work_command(project: Project, args: argparse.Namespace) -> str:
     )
     if args.benchmark:
         todo = [shard for shard in todo if shard.benchmark == args.benchmark]
+    todo = [shard for shard in todo if shard.index % args.shard_count == args.shard_index]
     if not todo:
         return f"{model.name}: nothing pending"
     backend = make_backend(model, model.backend, seed=args.seed, dtype=args.dtype or None)
@@ -217,6 +218,7 @@ def score_command(project: Project, args: argparse.Namespace) -> str:
     ]
     if args.benchmark:
         todo = [shard for shard in todo if shard.benchmark == args.benchmark]
+    todo = [shard for shard in todo if shard.index % args.shard_count == args.shard_index]
     if not todo:
         return f"{model.name}: nothing to score"
     scorers = Scorers(
@@ -283,6 +285,8 @@ def build_parser() -> argparse.ArgumentParser:
     work.add_argument("--seed", type=int, default=0)
     work.add_argument("--dtype", default="", help="override the model dtype, e.g. float16 on Turing GPUs")
     work.add_argument("--benchmark", default="", help="only this benchmark")
+    work.add_argument("--shard-index", type=int, default=0, help="this job's residue class of shard indexes")
+    work.add_argument("--shard-count", type=int, default=1, help="number of parallel jobs for this model")
     work.add_argument("--configs", type=Path, default=Path("configs"))
     work.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
 
@@ -295,6 +299,8 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--metricx-batch", type=int, default=32)
     score.add_argument("--budget-min", type=float, default=20.0, help="wall-clock budget for this job")
     score.add_argument("--benchmark", default="", help="only this benchmark")
+    score.add_argument("--shard-index", type=int, default=0, help="this job's residue class of shard indexes")
+    score.add_argument("--shard-count", type=int, default=1, help="number of parallel jobs for this model")
     score.add_argument("--configs", type=Path, default=Path("configs"))
     score.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
     return parser
