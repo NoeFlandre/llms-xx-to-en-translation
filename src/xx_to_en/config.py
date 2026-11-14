@@ -32,6 +32,7 @@ class ModelConfig(BaseModel):
     enabled: bool = True  # False keeps a model out of planning (blocked, not yet runnable)
     # vLLM batch cap; set where the default (1024) exceeds the model's cache capacity on an 80 GB GPU.
     max_num_seqs: int | None = Field(default=None, gt=0)
+    gpu_memory_utilization: float | None = Field(default=None, gt=0, le=1)  # vLLM share of GPU memory
     official_languages: list[str] | Literal["pending", "all"]
 
 

@@ -72,9 +72,11 @@ class VllmBackend:
     ) -> None:
         from vllm import LLM  # ty: ignore[import-not-found]
 
-        engine_options: dict[str, int] = {}
+        engine_options: dict[str, int | float] = {}
         if model.max_num_seqs is not None:
             engine_options["max_num_seqs"] = model.max_num_seqs
+        if model.gpu_memory_utilization is not None:
+            engine_options["gpu_memory_utilization"] = model.gpu_memory_utilization
         self._llm = LLM(
             model=model.hf_repo,
             dtype=dtype or model.dtype,
