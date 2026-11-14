@@ -62,3 +62,4 @@ max-complexity = 8
 [tool.mutmut]
 paths_to_mutate = ["src/xx_to_en"]
 tests_dir = ["tests"]
+also_copy = ["configs", "data"]  # tests read the YAML configs and the benchmark inventory from the repo root
