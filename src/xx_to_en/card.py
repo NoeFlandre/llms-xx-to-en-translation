@@ -92,9 +92,9 @@ def winners_table(winners: Mapping[str, tuple[str, float]]) -> str:
 
 
 KNOWN_GAPS = (
-    "Tatoeba for NLLB-200 3.3B and MADLAD-400 3B is incomplete: their shards did not finish within the "
-    "one-hour job limit on the GPUs available, so those cells stay below their total. No results were "
-    "generated for the missing shards."
+    "Tatoeba is incomplete for NLLB-200 3.3B, MADLAD-400 3B and MADLAD-400 10B: their shards did not finish "
+    "within the one-hour job limit on the GPUs available, so those cells stay below their total. Shards "
+    "that were not generated are absent from the dataset."
 )
 
 
