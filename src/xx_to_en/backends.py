@@ -150,7 +150,7 @@ class TransformersBackend:
         model: ModelConfig,
         *,
         seed: int = 0,
-        batch_size: int = 8,  # 32 ran out of memory on 15 GB and 44 GB GPUs (NLLB, PLaMo 8B, Gemma E4B)
+        batch_size: int = 4,  # 32 and 8 ran out of memory on 44 GB GPUs (NLLB, PLaMo, Gemma E4B)
         force_target_lang: bool = False,
         dtype: str | None = None,
     ) -> None:

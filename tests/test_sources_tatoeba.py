@@ -6,7 +6,8 @@ from xx_to_en import sources
 def _fake_hub(monkeypatch, available: set[str]) -> list[str]:
     requested: list[str] = []
 
-    def hub_file(repo: str, path: str) -> str:
+    def hub_file(repo: str, path: str, revision: str | None = None) -> str:
+        assert revision == sources.TATOEBA_REVISION
         requested.append(path)
         if path not in available:
             raise EntryNotFoundError("missing")

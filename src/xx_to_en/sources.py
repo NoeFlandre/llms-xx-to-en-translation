@@ -23,10 +23,14 @@ from xx_to_en.config import BenchmarkConfig
 WMT_BENCHMARKS = frozenset({"wmt22_xen", "wmt23_xen"})
 
 
-def _hub_file(repo: str, filename: str) -> str:
+# Tatoeba's test files change upstream; pinning the revision keeps every shard on the same content.
+TATOEBA_REVISION = "f337793bd1dbb50077995b8df53e16bc58451f33"
+
+
+def _hub_file(repo: str, filename: str, revision: str | None = None) -> str:
     from huggingface_hub import hf_hub_download
 
-    return hf_hub_download(repo_id=repo, filename=filename, repo_type="dataset")
+    return hf_hub_download(repo_id=repo, filename=filename, repo_type="dataset", revision=revision)
 
 
 def _lines(path: str) -> list[str]:
@@ -86,7 +90,7 @@ def _tatoeba_lines(repo: str, code: str) -> list[str]:
 
     for pair in (f"{code}-eng", f"eng-{code}"):
         try:
-            return _lines(_hub_file(repo, f"data/test/tatoeba-test.{pair}.tsv"))
+            return _lines(_hub_file(repo, f"data/test/tatoeba-test.{pair}.tsv", revision=TATOEBA_REVISION))
         except EntryNotFoundError:
             continue
     return []
