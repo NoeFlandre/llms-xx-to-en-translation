@@ -1,4 +1,3 @@
-import pytest
 from huggingface_hub.utils import EntryNotFoundError
 
 from xx_to_en import sources
@@ -30,7 +29,6 @@ def test_tatoeba_falls_back_to_the_english_first_direction(monkeypatch):
     assert requested == ["data/test/tatoeba-test.fra-eng.tsv", "data/test/tatoeba-test.eng-fra.tsv"]
 
 
-def test_tatoeba_raises_when_neither_direction_exists(monkeypatch):
+def test_tatoeba_has_no_rows_when_neither_direction_exists(monkeypatch):
     _fake_hub(monkeypatch, set())
-    with pytest.raises(FileNotFoundError, match="no Tatoeba test file for fra"):
-        sources._tatoeba_lines("repo", "fra")
+    assert sources._tatoeba_lines("repo", "fra") == []

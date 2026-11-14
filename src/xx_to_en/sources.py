@@ -77,6 +77,11 @@ def _load_tatoeba(benchmark: BenchmarkConfig, corpus_lang: str, bench_lang: str)
 
 
 def _tatoeba_lines(repo: str, code: str) -> list[str]:
+    """Lines of the Tatoeba test pair for ``code`` and English; empty when the test split has none.
+
+    The mirrored test split has no English pair for about two dozen languages, so their Tatoeba
+    rows are simply absent rather than failing the whole shard.
+    """
     from huggingface_hub.utils import EntryNotFoundError
 
     for pair in (f"{code}-eng", f"eng-{code}"):
@@ -84,7 +89,7 @@ def _tatoeba_lines(repo: str, code: str) -> list[str]:
             return _lines(_hub_file(repo, f"data/test/tatoeba-test.{pair}.tsv"))
         except EntryNotFoundError:
             continue
-    raise FileNotFoundError(f"no Tatoeba test file for {code} against English")
+    return []
 
 
 LOADERS: dict[str, Callable[[BenchmarkConfig, str, str], list[Segment]]] = {

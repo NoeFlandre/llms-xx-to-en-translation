@@ -9,7 +9,7 @@ WMT22 and WMT23 X->EN are the only WMT sets used. WMT24 is not used.
 | amh_Ethi | 5,714 | yes | yes | - | - | - | English-origin only |
 | arb_Arab | 913,484 | yes | yes | - | - | - | English-origin only |
 | arb_Latn | 22 | - | - | - | - | - | **uncovered** |
-| azj_Latn | 256,369 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
+| azj_Latn | 256,369 | yes | yes | - | - | - | English-origin only |
 | bel_Cyrl | 320,013 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | ben_Beng | 213,433 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | ben_Latn | 3 | - | - | - | - | - | **uncovered** |
@@ -34,7 +34,7 @@ WMT22 and WMT23 X->EN are the only WMT sets used. WMT24 is not used.
 | gle_Latn | 32,620 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | glg_Latn | 365,390 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | guj_Gujr | 26,135 | yes | yes | - | - | - | English-origin only |
-| hau_Latn | 88,234 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
+| hau_Latn | 88,234 | yes | yes | - | - | - | English-origin only |
 | heb_Hebr | 716,275 | yes | yes | - | yes | yes | WMT (native) |
 | hin_Deva | 140,104 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | hun_Latn | 1,002,875 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
@@ -90,7 +90,7 @@ WMT22 and WMT23 X->EN are the only WMT sets used. WMT24 is not used.
 | ukr_Cyrl | 1,723,169 | yes | yes | - | yes | yes | WMT (native) |
 | urd_Arab | 212,769 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | uzn_Cyrl | 221 | - | - | - | - | - | **uncovered** |
-| uzn_Latn | 241,448 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
+| uzn_Latn | 241,448 | yes | yes | - | - | - | English-origin only |
 | vie_Latn | 613,672 | yes | yes | - | - | yes | Tatoeba only (mixed origin) |
 | xho_Latn | 3,479 | yes | yes | - | - | - | English-origin only |
 | ydd_Hebr | 12,544 | yes | - | - | - | yes | Tatoeba only (mixed origin) |
@@ -100,6 +100,6 @@ WMT22 and WMT23 X->EN are the only WMT sets used. WMT24 is not used.
 | zul_Latn | 8,246 | yes | yes | - | - | - | English-origin only |
 
 - Non-English configs: 94 (71,490,138 rows)
-- Status counts: {'Tatoeba only (mixed origin)': 56, 'English-origin only': 24, '**uncovered**': 6, 'WMT (native)': 8}
-- Rows with a native-origin benchmark (WMT or Tatoeba): 67,500,095 (94.4%)
+- Status counts: {'Tatoeba only (mixed origin)': 53, 'English-origin only': 27, '**uncovered**': 6, 'WMT (native)': 8}
+- Rows with a native-origin benchmark (WMT or Tatoeba): 66,914,044 (93.6%)
 - Rows with no benchmark: 351

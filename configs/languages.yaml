@@ -19,7 +19,7 @@ arb_Latn:
 azj_Latn:
   iso639_1: az
   ntrex_128: aze_Latn
-  tatoeba_xen: aze
+  tatoeba_xen: aze_Latn
 bel_Cyrl:
   iso639_1: be
 ben_Beng:
@@ -84,6 +84,7 @@ guj_Gujr:
   iso639_1: gu
 hau_Latn:
   iso639_1: ha
+  tatoeba_xen: hau_Latn
 heb_Hebr:
   iso639_1: he
   wmt23_xen: he
@@ -197,6 +198,7 @@ spa_Latn:
   iso639_1: es
 srp_Cyrl:
   iso639_1: sr
+  tatoeba_xen: srp_Cyrl
 srp_Latn:
   prompt_code: sr-Latn
   flores_plus_devtest: ''
@@ -231,7 +233,7 @@ uzn_Cyrl:
 uzn_Latn:
   iso639_1: uz
   ntrex_128: uzb_Latn
-  tatoeba_xen: uzb
+  tatoeba_xen: uzb_Latn
 vie_Latn:
   iso639_1: vi
 xho_Latn:
@@ -244,6 +246,7 @@ yor_Latn:
 yue_Hani:
   prompt_code: zh-Hant-HK
   flores_plus_devtest: yue_Hant
+  tatoeba_xen: yue_Hant
   ntrex_128: yue_Hant
 zsm_Latn:
   iso639_1: ms
