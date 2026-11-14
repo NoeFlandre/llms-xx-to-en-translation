@@ -237,9 +237,10 @@ def launch(
 
 def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str, Any], dry_run: bool) -> None:
     now = datetime.now()
-    if crosses_boundary(now):
-        print(f"{now:%H:%M}: a one-hour job now would cross 09:00 or 19:00; waiting", flush=True)
-        return
+    # The daytime boundary limits the default queue only; besteffort jobs (capped) may run through it.
+    daytime = crosses_boundary(now)
+    if daytime:
+        print(f"{now:%H:%M}: default queue waits past 09:00 or 19:00; besteffort only", flush=True)
     pending = pending_work(project, repo_files(REPO))
     refresh_jobs(state, time.time(), {key: info[1] for key, info in pending.items()})
     tracked = {(job["site"], job["id"]) for job in state["jobs"]}
@@ -253,9 +254,12 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
         for key, info in pending.items()
         if no_progress.get(key, 0) < MAX_NO_PROGRESS
     )
+    pools = build_pools(pools_config, state)
+    if daytime:
+        pools = [pool for pool in pools if pool.besteffort]
     placements = choose_placements(
         [Pending(key, need, fp16, jobs_for_pair(items)) for _, key, need, fp16, items in ready],
-        build_pools(pools_config, state),
+        pools,
         running_models=frozenset(job["model"] for job in state["jobs"]),
         running_per_site=Counter(job["site"] for job in state["jobs"]),
         running_besteffort=sum(job.get("queue") == "besteffort" for job in state["jobs"]),

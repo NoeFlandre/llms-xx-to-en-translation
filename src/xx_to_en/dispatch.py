@@ -3,8 +3,8 @@
 Rules followed (Grid'5000 usage policy, default queue only):
 - A job of one hour or less is exempt from the daytime quota when submitted less than 10 minutes
   before it starts. Every job is one hour and is submitted only when its GPU is already free.
-- A job cannot cross 09:00 or 19:00. Checked on every day, stricter than the weekend rule. (Observed:
-  a default-queue job submitted at 08:27 on a Saturday was scheduled to start at 09:03.)
+- Default queue: a job cannot cross 09:00 or 19:00, checked every day (stricter than the weekend rule).
+  Observed: a default-queue job submitted at 08:27 on a Saturday was scheduled to start at 09:03.
 - Jobs are spread over sites and capped per site and in total.
 
 Turing GPUs have no bf16: they take only models marked fp16_ok, and run them in float16.
