@@ -228,6 +228,7 @@ def _benchmark_shards(project: cli.Project) -> list[Shard]:
 
 
 def test_work_command_generates_uploads_each_shard_then_the_manifest(project, tmp_path, monkeypatch):
+    monkeypatch.delenv("OAR_JOB_ID", raising=False)  # the manifest name must not depend on the caller's job
     monkeypatch.setattr(huggingface_hub, "HfApi", _FakeHfApi)
     monkeypatch.setattr(results_store, "repo_files", lambda repo_id: set())
     monkeypatch.setattr(cli, "make_backend", lambda model, kind, *, seed, dtype: "backend")
