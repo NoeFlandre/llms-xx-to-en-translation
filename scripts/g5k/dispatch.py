@@ -288,8 +288,13 @@ def main(argv: list[str] | None = None) -> int:
             cycle(project, pools_config, state, args.dry_run)
             if args.dry_run:
                 return 0
-            if not pending_work(project, repo_files(REPO)):
-                print("all shards and scores are in the dataset", flush=True)
+            # Pairs blocked by MAX_NO_PROGRESS are accepted as gaps: they do not keep the dispatcher running.
+            remaining = pending_work(project, repo_files(REPO))
+            no_progress = state.get("no_progress", {})
+            blocked = sorted(key for key in remaining if no_progress.get(key, 0) >= MAX_NO_PROGRESS)
+            if len(blocked) == len(remaining):
+                gaps = f"; accepted gaps: {', '.join(blocked)}" if blocked else ""
+                print(f"all shards and scores are in the dataset{gaps}", flush=True)
                 return 0
         except Exception as error:
             print(f"{datetime.now():%H:%M}: cycle failed, retrying in {POLL_S}s: {error!r}", flush=True)
