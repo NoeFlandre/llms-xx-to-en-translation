@@ -45,12 +45,23 @@ def _generic_chat(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptI
     return PromptInput(text=backend.render_chat(messages, {}))
 
 
+def _translategemma_generic(segment: Segment) -> PromptInput:
+    """The generic instruction in TranslateGemma's own turn format, for languages its template does not name.
+
+    Its chat template only accepts the structured content (with language codes), so this turn is
+    written out directly; it is the template's output for a user turn with the generic instruction.
+    """
+    turn = GENERIC_INSTRUCTION + segment.source
+    text = f"<bos><start_of_turn>user\n{turn}<end_of_turn>\n<start_of_turn>model\n"
+    return PromptInput(text=text)
+
+
 def _translategemma(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
     source_code = iso(segment.corpus_lang)
     if not source_code:
-        # The model's template names languages by ISO 639-1 code only; the other corpus languages
-        # (ben_Latn, ckb_Arab, ...) get the same generic instruction as the other models.
-        return _generic_chat(segment, backend, iso)
+        # The model's template names languages by ISO 639-1 code only; the corpus languages without
+        # a code there (ceb_Latn) get the generic instruction in the same turn format.
+        return _translategemma_generic(segment)
     content = [
         {
             "type": "text",

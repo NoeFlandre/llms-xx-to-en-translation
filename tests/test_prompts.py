@@ -40,10 +40,10 @@ def test_translategemma_uses_codes_in_the_content_list():
 
 def test_translategemma_falls_back_to_generic_prompt_without_iso_639_1():
     backend = FakeBackend()
-    make_prompt("translategemma", _segment("ceb_Latn"), backend, ISO)
-    message = backend.last_messages[0]
-    assert message["content"].startswith("Translate the following text into English")
-    assert "Bonjour le monde." in message["content"]
+    prompt = make_prompt("translategemma", _segment("ceb_Latn"), backend, ISO)
+    assert prompt.text.startswith("<bos><start_of_turn>user\nTranslate the following text into English")
+    assert "Bonjour le monde." in prompt.text
+    assert prompt.text.endswith("<end_of_turn>\n<start_of_turn>model\n")
 
 
 def test_plamo_raw_format_adds_bos_and_stop_strings():
@@ -83,8 +83,8 @@ def test_generic_chat_still_renders_an_instruction():
 
 def test_iso_lookup_may_be_a_mapping_or_missing():
     backend = FakeBackend()
-    make_prompt("translategemma", _segment("fra_Latn"), backend, {})
-    assert backend.last_messages[0]["content"].startswith("Translate the following text into English")
+    prompt = make_prompt("translategemma", _segment("fra_Latn"), backend, {})
+    assert prompt.text.startswith("<bos><start_of_turn>user\nTranslate the following text into English")
     prompt = make_prompt("translategemma", _segment("fra_Latn"), backend, {"fra_Latn": "fr"})
     assert prompt.text
 
