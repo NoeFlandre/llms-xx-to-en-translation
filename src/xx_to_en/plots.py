@@ -136,6 +136,7 @@ LABEL_DESCENT = 3
 CHAR_WIDTH = 6.3
 MARGIN = 4
 OUTSIDE_PLOT = 1e6
+PLACEMENT_ROUNDS = 4
 
 
 @dataclass(frozen=True)
@@ -179,19 +180,37 @@ def _cost(text: str, option: tuple[float, float, str], taken: list[_Box]) -> flo
     return outside + sum(box.overlap_area(other) for other in taken)
 
 
-def _label_position(point: Point, x: float, y: float, taken: list[_Box]) -> tuple[float, float, str]:
+def _label_position(point: Point, anchor: tuple[float, float], taken: list[_Box]) -> tuple[float, float, str]:
+    x, y = anchor
     return min(_options(x, y), key=lambda option: _cost(point.label, option, taken))
 
 
+def _label_boxes(points: Sequence[Point], positions: list[tuple[float, float, str]], skip: int) -> list[_Box]:
+    return [
+        _label_box(point.label, *position)
+        for index, (point, position) in enumerate(zip(points, positions, strict=True))
+        if index != skip
+    ]
+
+
+def _refine(
+    points: Sequence[Point],
+    anchors: list[tuple[float, float]],
+    markers: list[_Box],
+    positions: list[tuple[float, float, str]],
+) -> None:
+    for index, point in enumerate(points):
+        taken = markers + _label_boxes(points, positions, index)
+        positions[index] = _label_position(point, anchors[index], taken)
+
+
 def _placements(scale: _Scale, points: Sequence[Point]) -> list[tuple[float, float, str]]:
-    taken = [_marker_box(scale.x_of(p.params_b), scale.y_of(p.value)) for p in points]
-    placed: list[tuple[float, float, str]] = []
-    for point in points:
-        x, y = scale.x_of(point.params_b), scale.y_of(point.value)
-        position = _label_position(point, x, y, taken)
-        taken.append(_label_box(point.label, *position))
-        placed.append(position)
-    return placed
+    anchors = [(scale.x_of(p.params_b), scale.y_of(p.value)) for p in points]
+    markers = [_marker_box(x, y) for x, y in anchors]
+    positions = [_options(x, y)[0] for x, y in anchors]
+    for _ in range(PLACEMENT_ROUNDS):
+        _refine(points, anchors, markers, positions)
+    return positions
 
 
 def _marker(scale: _Scale, point: Point, colour: str, position: tuple[float, float, str]) -> str:
