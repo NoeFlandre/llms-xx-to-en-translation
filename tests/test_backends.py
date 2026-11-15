@@ -18,7 +18,7 @@ from xx_to_en.backends import (
 )
 from xx_to_en.config import ModelConfig
 
-EOS = 5  # the fake sequence-to-sequence model "generates" the input followed by this token
+EOS = 5
 
 
 def _model() -> ModelConfig:

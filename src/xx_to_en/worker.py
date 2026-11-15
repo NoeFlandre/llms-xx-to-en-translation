@@ -26,7 +26,7 @@ from xx_to_en.tables import read_table, write_table
 if TYPE_CHECKING:
     from xx_to_en.metric_runtime import Scorers
 
-PRIVATE_FIELDS: frozenset[str] = frozenset()  # source and reference are published with each row
+PRIVATE_FIELDS: frozenset[str] = frozenset()
 SegmentKey = tuple[str, str, str]
 
 

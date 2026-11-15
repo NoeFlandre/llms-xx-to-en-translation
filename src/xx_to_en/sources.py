@@ -24,7 +24,6 @@ from xx_to_en.config import BenchmarkConfig
 WMT_BENCHMARKS = frozenset({"wmt22_xen", "wmt23_xen"})
 
 
-# Tatoeba's test files change upstream; pinning the revision keeps every shard on the same content.
 TATOEBA_REVISION = "f337793bd1dbb50077995b8df53e16bc58451f33"
 
 

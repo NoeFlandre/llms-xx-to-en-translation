@@ -28,8 +28,6 @@ def _load_metricx(repo: Path) -> tuple[Any, Any, Any]:
     import transformers  # ty: ignore[import-not-found]
     from metricx24 import models  # ty: ignore[import-not-found]
 
-    # Slow (SentencePiece) tokenizer: the fast conversion imports protobuf generated code that
-    # unbabel-comet's protobuf<5 pin rules out. The sentencepiece model is the same either way.
     tokenizer = transformers.AutoTokenizer.from_pretrained(METRICX_TOKENIZER, use_fast=False)
     device = torch.device("cuda")
     model = models.MT5ForRegression.from_pretrained(METRICX_MODEL, torch_dtype="auto")
@@ -62,7 +60,7 @@ def _metricx_forward(
     output = model(
         input_ids=torch.tensor(ids, device=device),
         attention_mask=torch.tensor(masks, device=device),
-        use_cache=False,  # the decoder cache breaks this upstream model on transformers 4.57
+        use_cache=False,
     )
     return output.predictions.float().cpu().tolist()
 
@@ -80,7 +78,6 @@ def _metricx_predictions(
     except RuntimeError as error:
         if "out of memory" not in str(error).lower() or len(chunk) == 1:
             raise
-    # Outside the handler, so the failed batch's tensors are released before the halves run.
     _release_gpu_memory()
     middle = len(chunk) // 2
     return [

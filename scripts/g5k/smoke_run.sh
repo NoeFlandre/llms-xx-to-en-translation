@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Tiny end-to-end run on one GPU node: a few segments of one language, then clean up.
-#
-#   oarsub -n xx2en-smoke -p "cluster='granite'" -l gpu=1,walltime=0:20 \
-#     "MODEL=lfm3-1.7b LANG=fra_Latn LIMIT=20 bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/smoke_run.sh"
 set -euo pipefail
 
 SRC="${SRC:-$HOME/src/llms-xx-to-en-translation}"
@@ -15,7 +11,6 @@ JOB="${OAR_JOB_ID:-local}"
 WORK="/tmp/xx2en-${JOB}"
 
 export HF_HOME="${WORK}/hf"
-# FlashInfer top-k/top-p sampling JIT-compiles with nvcc, which compute nodes lack; greedy decoding does not need it.
 export VLLM_USE_FLASHINFER_SAMPLER=0
 export HF_TOKEN="$(cat "$HOME/.cache/huggingface/token")"
 mkdir -p "$WORK"

@@ -74,8 +74,6 @@ def _translategemma_generic(segment: Segment) -> PromptInput:
 def _translategemma(segment: Segment, backend: Backend, iso: IsoLookup) -> PromptInput:
     source_code = iso(segment.corpus_lang)
     if not source_code:
-        # The model's template names languages by ISO 639-1 code only; the corpus languages without
-        # a code there (ceb_Latn) get the generic instruction in the same turn format.
         return _translategemma_generic(segment)
     content = [
         {

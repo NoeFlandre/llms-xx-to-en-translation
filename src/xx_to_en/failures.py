@@ -19,7 +19,7 @@ class FailureFlags:
     repetition_loop: bool
     length_ratio_outlier: bool
     untranslated_copy: bool
-    wrong_language: bool | None  # None when no language identifier was supplied
+    wrong_language: bool | None
 
     @property
     def any(self) -> bool:

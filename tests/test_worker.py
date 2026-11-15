@@ -44,11 +44,10 @@ def test_run_budgeted_stops_when_the_next_shard_would_overrun():
 
     def step(shard: Shard) -> None:
         calls.append(shard.shard_id)
-        clock_state["now"] += 10.0  # every shard takes 10 s
+        clock_state["now"] += 10.0
 
     shards = [Shard("m", "wmt22_xen", i, ("ces_Latn",)) for i in range(5)]
     finished = run_budgeted(shards, budget_s=25.0, step=step, clock=lambda: clock_state["now"])
-    # shard 0 runs 0-10 s, shard 1 runs 10-20 s; at 20 s, 20 + 10 > 25, so shard 2 is not started
     assert [s.index for s in finished] == [0, 1]
     assert calls == ["wmt22_xen-000", "wmt22_xen-001"]
 

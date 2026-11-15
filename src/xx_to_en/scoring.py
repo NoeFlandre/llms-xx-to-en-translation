@@ -14,9 +14,6 @@ from xx_to_en.failures import detect
 ENGLISH = "eng_Latn"
 GLOTLID_PREFIX = "__label__"
 
-# ISO 639-1 codes of the XLM-R pretraining languages (inherited by COMET-22) and of the mT5
-# languages (inherited by MetricX-24), taken as their intersection. Approximate: check against the
-# XLM-R and mT5 papers before publishing. Languages outside this set get chrF++ only.
 NEURAL_ISO_639_1: frozenset[str] = frozenset(
     {
         "af",

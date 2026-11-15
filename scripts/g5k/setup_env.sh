@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Create or refresh the project virtualenv on a Grid'5000 node.
-# Run inside an OAR job (not on a frontend): installing vLLM is heavy.
-#
-#   oarsub -n xx2en-setup -l nodes=1,walltime=0:45 "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/setup_env.sh"
 set -euo pipefail
 
 SRC="${SRC:-$HOME/src/llms-xx-to-en-translation}"

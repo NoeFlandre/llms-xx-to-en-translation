@@ -20,11 +20,10 @@ from datetime import datetime, timedelta
 JOB_MINUTES = 60
 MAX_JOBS_PER_SITE = 24
 MAX_JOBS_TOTAL = 60
-# Besteffort is granted, but the usage policy asks for staff contact before large-scale use: keep it modest.
 MAX_BESTEFFORT_JOBS = 4
 BOUNDARY_HOURS = (9, 19)
 MAX_JOBS_PER_PAIR = 6
-ITEMS_PER_JOB = 4  # generation and scoring items one job can finish within its budget
+ITEMS_PER_JOB = 4
 
 
 @dataclass(frozen=True)
@@ -42,7 +41,7 @@ class Pending:
     model: str
     memory_gb: int
     fp16_ok: bool = False
-    jobs: int = 1  # parallel jobs wanted for this model and benchmark
+    jobs: int = 1
 
 
 @dataclass(frozen=True)
@@ -52,7 +51,7 @@ class Placement:
     cluster: str
     dtype: str = "bfloat16"
     queue: str = "default"
-    shard_index: int = 0  # the job takes shards whose index is congruent to this, modulo shard_count
+    shard_index: int = 0
     shard_count: int = 1
 
 

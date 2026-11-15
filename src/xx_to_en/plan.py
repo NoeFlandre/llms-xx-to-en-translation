@@ -28,7 +28,7 @@ class Shard:
     benchmark: str
     index: int
     langs: tuple[str, ...]
-    part: int | None = None  # set on a part of an unfinished shard that was cut into smaller pieces
+    part: int | None = None
 
     @property
     def shard_id(self) -> str:

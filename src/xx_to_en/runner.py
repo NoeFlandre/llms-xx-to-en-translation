@@ -130,7 +130,6 @@ def translate(
     return [_finish(entry, generated, cache) for entry in plan]
 
 
-# One planned segment: (segment, token budget, cache key, prompt, cached output or None).
 _Planned = tuple[Segment, int, str, PromptInput, str | None]
 
 

@@ -32,14 +32,13 @@ from xx_to_en.results_store import repo_files, score_path, shard_path
 ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE = Path.home() / ".cache" / "xx2en-dispatch" / "state.json"
 REPO = "NoeFlandre/llms-xx-to-en-translation"
-STALE_WAIT_S = 540  # just under 10 minutes: a job that starts later loses the exemption
+STALE_WAIT_S = 540
 POLL_S = 300
-MAX_NO_PROGRESS = 3  # consecutive jobs for one model and benchmark that uploaded nothing
+MAX_NO_PROGRESS = 3
 MAX_FAILURES_PER_CLUSTER = 2
 REMOTE_JOB = "bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 OAR_ID = re.compile(r"OAR_JOB_ID=(\d+)")
 STATE_LINE = re.compile(r"state = (\w+)")
-# key "model|benchmark" -> (GPU memory need GB, missing files, size in billions, placeable on float16 GPUs)
 PendingInfo = tuple[int, int, float, bool]
 
 
@@ -49,7 +48,7 @@ def ssh(site: str, command: str) -> str:
         capture_output=True,
         text=True,
         timeout=300,
-        check=False,  # callers read stdout; empty output means the call failed
+        check=False,
     )
     return "\n".join(line for line in result.stdout.splitlines() if "bashrc" not in line)
 
@@ -139,7 +138,6 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
         if generation + scoring == 0:
             continue
         model = project.models[name]
-        # A float16 GPU can generate but not score, so it takes the work only while generation is pending.
         out[f"{name}|{benchmark}"] = (
             model.gpu_memory_gb_min,
             generation + scoring,
@@ -237,13 +235,11 @@ def launch(
 
 def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str, Any], dry_run: bool) -> None:
     now = datetime.now()
-    # The daytime boundary limits the default queue only; besteffort jobs (capped) may run through it.
     daytime = crosses_boundary(now)
     if daytime:
         print(f"{now:%H:%M}: default queue waits past 09:00 or 19:00; besteffort only", flush=True)
     pending = pending_work(project, repo_files(REPO))
     refresh_jobs(state, time.time(), {key: info[1] for key, info in pending.items()})
-    # Persist the dropped jobs now: a process killed later would otherwise count them again.
     save_state(state)
     tracked = {(job["site"], job["id"]) for job in state["jobs"]}
     for entry in {entry["site"] for entry in pools_config}:
@@ -285,12 +281,10 @@ def main(argv: list[str] | None = None) -> int:
     pools_config = load_pools(args.sites)
     state = load_state()
     while True:
-        # A network blip (DNS, Hub, Grid'5000 frontend) must not stop the dispatcher: retry next cycle.
         try:
             cycle(project, pools_config, state, args.dry_run)
             if args.dry_run:
                 return 0
-            # Pairs blocked by MAX_NO_PROGRESS are accepted as gaps: they do not keep the dispatcher running.
             remaining = pending_work(project, repo_files(REPO))
             no_progress = state.get("no_progress", {})
             blocked = sorted(key for key in remaining if no_progress.get(key, 0) >= MAX_NO_PROGRESS)

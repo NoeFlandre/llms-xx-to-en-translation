@@ -108,7 +108,6 @@ def make_backend(model: ModelConfig, kind: str, *, seed: int, dtype: str | None 
     if kind == "transformers":
         from xx_to_en.backends import TransformersBackend
 
-        # NLLB needs its target language forced; MADLAD takes the target from a text prefix instead.
         return TransformersBackend(model, seed=seed, force_target_lang=model.family == "nllb", dtype=dtype)
     raise SystemExit(f"unknown backend {kind!r}")
 
@@ -152,7 +151,7 @@ def _translate_items(
 
 
 def run_command(project: Project, args: argparse.Namespace) -> str:
-    from xx_to_en.backends import Backend  # noqa: F401 - type reference for readers
+    from xx_to_en.backends import Backend  # noqa: F401
 
     model = project.model(args.model)
     _check_access(model)

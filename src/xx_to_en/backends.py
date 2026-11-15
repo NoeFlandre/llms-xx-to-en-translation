@@ -18,7 +18,6 @@ from typing import Any, Protocol
 
 from xx_to_en.config import ModelConfig
 
-# Markers that close a reasoning block. Anything before the last marker is discarded.
 THINKING_END_MARKERS = ("<channel|>", "</think>")
 NLLB_TARGET = "eng_Latn"
 
@@ -152,7 +151,7 @@ class TransformersBackend:
         model: ModelConfig,
         *,
         seed: int = 0,
-        batch_size: int = 4,  # 32 and 8 ran out of memory on 44 GB GPUs (NLLB, PLaMo, Gemma E4B)
+        batch_size: int = 4,
         force_target_lang: bool = False,
         dtype: str | None = None,
     ) -> None:

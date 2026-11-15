@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# One tiny job (1 h walltime): translate the pending shards of one model and benchmark, then score them.
-# Every shard is uploaded to the results dataset when it finishes, so a killed job loses at most one
-# shard and the next job resumes from what exists. Float16 jobs (Turing GPUs) skip scoring, which
-# needs bf16; a bf16 node scores those shards later.
-#
-#   oarsub -n xx2en-<model> -p "cluster='granite'" -l gpu=1,walltime=1:00 \
-#     "MODEL=translategemma-4b-it BENCHMARK=flores_plus_devtest DTYPE=bfloat16 bash $HOME/src/llms-xx-to-en-translation/scripts/g5k/work_job.sh"
 set -euo pipefail
 
 SRC="${SRC:-$HOME/src/llms-xx-to-en-translation}"
@@ -22,7 +15,6 @@ WORK="/tmp/xx2en-${JOB}"
 
 BENCH_ARGS=()
 if [ -n "$BENCHMARK" ]; then BENCH_ARGS=(--benchmark "$BENCHMARK"); fi
-# Parallel jobs for one model split its shards by index; the work and score steps use the same split.
 SHARD_INDEX="${SHARD_INDEX:-0}"
 SHARD_COUNT="${SHARD_COUNT:-1}"
 SHARD_ARGS=(--shard-index "$SHARD_INDEX" --shard-count "$SHARD_COUNT")
@@ -30,7 +22,6 @@ SHARD_ARGS=(--shard-index "$SHARD_INDEX" --shard-count "$SHARD_COUNT")
 export HF_HOME="${WORK}/hf"
 export HF_TOKEN="$(cat "$HOME/.cache/huggingface/token")"
 export VLLM_USE_FLASHINFER_SAMPLER=0
-# Compile and kernel caches live on the node, not in the NFS home (concurrent jobs corrupt shared caches).
 export VLLM_CACHE_ROOT="${WORK}/vllm"
 export TORCHINDUCTOR_CACHE_DIR="${WORK}/inductor"
 export TRITON_CACHE_DIR="${WORK}/triton"
