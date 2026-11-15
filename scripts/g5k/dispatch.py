@@ -129,7 +129,7 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
     for name, model in project.models.items():
         if not model.enabled:
             continue
-        for shard in project.shards(model, lambda shard: shard_path(shard) in done):
+        for shard in project.shards(model, done):
             counts = grouped.setdefault((name, shard.benchmark), [0, 0])
             counts[0] += shard_path(shard) not in done
             counts[1] += score_path(shard) not in done
@@ -242,6 +242,8 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
         print(f"{now:%H:%M}: default queue waits past 09:00 or 19:00; besteffort only", flush=True)
     pending = pending_work(project, repo_files(REPO))
     refresh_jobs(state, time.time(), {key: info[1] for key, info in pending.items()})
+    # Persist the dropped jobs now: a process killed later would otherwise count them again.
+    save_state(state)
     tracked = {(job["site"], job["id"]) for job in state["jobs"]}
     for entry in {entry["site"] for entry in pools_config}:
         for job_id in waiting_orphans(entry, tracked):

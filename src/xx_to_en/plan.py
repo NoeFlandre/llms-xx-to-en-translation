@@ -70,8 +70,8 @@ def _parts(shard: Shard, split_size: int | None, is_done: Callable[[Shard], bool
 def _split(shard: Shard, size: int) -> list[Shard]:
     """Consecutive parts of ``size`` languages of one shard, numbered from 0."""
     return [
-        Shard(shard.model, shard.benchmark, shard.index, shard.langs[start : start + size], part)
-        for part, start in enumerate(range(0, len(shard.langs), size))
+        Shard(shard.model, shard.benchmark, shard.index, run, part)
+        for part, run in enumerate(_runs(shard.langs, size))
     ]
 
 
@@ -82,10 +82,12 @@ def _langs_of(items: Sequence[WorkItem], benchmark: str) -> list[str]:
 
 def _chunk(model: str, benchmark: str, langs: Sequence[str], size: int) -> list[Shard]:
     """Consecutive runs of ``size`` languages, numbered from 0."""
-    return [
-        Shard(model, benchmark, index, tuple(langs[start : start + size]))
-        for index, start in enumerate(range(0, len(langs), size))
-    ]
+    return [Shard(model, benchmark, index, run) for index, run in enumerate(_runs(langs, size))]
+
+
+def _runs(langs: Sequence[str], size: int) -> list[tuple[str, ...]]:
+    """Consecutive runs of ``size`` languages, in order; the last run may be shorter."""
+    return [tuple(langs[start : start + size]) for start in range(0, len(langs), size)]
 
 
 def pending(shards: Sequence[Shard], is_done: Callable[[Shard], bool]) -> list[Shard]:

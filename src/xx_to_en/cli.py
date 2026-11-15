@@ -20,7 +20,7 @@ from xx_to_en.config import BenchmarkConfig, ModelConfig, load_benchmarks, load_
 from xx_to_en.coverage import build_coverage, render_markdown, summarize
 from xx_to_en.inventory import Inventory, load_inventory
 from xx_to_en.languages import LanguageMap, corpus_languages
-from xx_to_en.plan import Shard, build_shards, pending
+from xx_to_en.plan import Shard, build_shards
 from xx_to_en.runner import Decoding, WorkItem, plan_work
 
 
@@ -73,9 +73,19 @@ class Project:
             supported=self.supported_languages(model),
         )
 
-    def shards(self, model: ModelConfig, is_done: Callable[[Shard], bool]) -> list[Shard]:
-        """The model's shards, with unfinished shards cut into parts where its config asks."""
-        return build_shards(model.name, self.plan(model), splits=model.split_shards, is_done=is_done)
+    def shards(self, model: ModelConfig, files: set[str]) -> list[Shard]:
+        """The model's shards, given the files already in the results repository.
+
+        Unfinished shards are cut into parts where the model's config asks (``split_shards``).
+        """
+        from xx_to_en.results_store import shard_path
+
+        return build_shards(
+            model.name,
+            self.plan(model),
+            splits=model.split_shards,
+            is_done=lambda shard: shard_path(shard) in files,
+        )
 
 
 def plan_command(project: Project, model_name: str, benchmarks: list[str] | None) -> str:
@@ -172,10 +182,7 @@ def _pending_generation(project: Project, model: ModelConfig, files: set[str]) -
     """Shards of the model whose hypotheses are not in the results repository yet."""
     from xx_to_en.results_store import shard_path
 
-    def is_done(shard: Shard) -> bool:
-        return shard_path(shard) in files
-
-    return pending(project.shards(model, is_done), is_done=is_done)
+    return [shard for shard in project.shards(model, files) if shard_path(shard) not in files]
 
 
 def _model_revision(model: ModelConfig) -> str:
@@ -262,7 +269,7 @@ def _unscored_shards(project: Project, model: ModelConfig, files: set[str]) -> l
 
     return [
         shard
-        for shard in project.shards(model, lambda shard: shard_path(shard) in files)
+        for shard in project.shards(model, files)
         if shard_path(shard) in files and score_path(shard) not in files
     ]
 

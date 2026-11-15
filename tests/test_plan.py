@@ -1,6 +1,11 @@
+from pathlib import Path
+
+from xx_to_en.cli import Project
 from xx_to_en.plan import Shard, build_shards, pending
 from xx_to_en.results_store import shard_path
 from xx_to_en.runner import WorkItem
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _items(benchmark: str, langs: list[str]) -> list[WorkItem]:
@@ -72,3 +77,13 @@ def test_split_applies_only_to_benchmarks_it_names():
         "ntrex_128-000-02",
         "wmt22_xen-000",
     ]
+
+
+def test_project_splits_only_the_unfinished_shards_of_a_configured_benchmark():
+    project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
+    model = project.model("madlad400-10b-mt")
+    done = {shard_path(Shard(model.name, "tatoeba_xen", 0, ()))}
+    ids = {s.shard_id for s in project.shards(model, done) if s.benchmark == "tatoeba_xen"}
+    assert "tatoeba_xen-000" in ids
+    assert "tatoeba_xen-001-00" in ids
+    assert "tatoeba_xen-001" not in ids

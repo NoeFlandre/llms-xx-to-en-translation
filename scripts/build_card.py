@@ -32,7 +32,7 @@ def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
     for name, model in project.models.items():
         cells: dict[str, Cell] = {}
         if model.enabled:
-            shards = project.shards(model, lambda shard: shard_path(shard) in files)
+            shards = project.shards(model, files)
             for benchmark in project.benchmarks:
                 own = [s for s in shards if s.benchmark == benchmark]
                 cells[benchmark] = Cell(
