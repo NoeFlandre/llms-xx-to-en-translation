@@ -6,7 +6,7 @@ uv run xx2en card --no-upload
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -15,7 +15,7 @@ from huggingface_hub import HfApi, hf_hub_download
 from xx_to_en.card import ModelScore, render, results_table, winners_table
 from xx_to_en.cli import Project
 from xx_to_en.languages import corpus_languages
-from xx_to_en.plots import Point, tradeoff_svg
+from xx_to_en.plots import Point, tradeoff_svg, wins_svg
 from xx_to_en.report import per_language_winner, volume_weighted_mean
 from xx_to_en.results_store import repo_files
 from xx_to_en.tables import read_table
@@ -93,9 +93,9 @@ def _winners(per_language: dict[str, dict[str, float]]) -> dict[str, tuple[str, 
 
 
 TRADE_OFFS = (
-    ("volume_chrf", "Volume-weighted chrF++", "overall_chrf_pp", True),
-    ("comet22", "COMET-22", "comet22", True),
-    ("metricx24", "MetricX-24", "metricx24", False),
+    ("volume_chrf", "Volume-weighted chrF++", "overall_chrf_pp", True, 1),
+    ("comet22", "COMET-22", "comet22", True, 3),
+    ("metricx24", "MetricX-24", "metricx24", False, 2),
 )
 PLOTS_BASE = f"https://huggingface.co/datasets/{REPO}/resolve/main"
 
@@ -115,15 +115,28 @@ def trade_off_plots(summaries: list[ModelScore], project: Project) -> tuple[str,
     """Markdown that embeds one trade-off plot per metric, and the SVG files behind it by repository path."""
     lines: list[str] = []
     files: dict[str, str] = {}
-    for slug, title, field, higher_is_better in TRADE_OFFS:
+    for slug, title, field, higher_is_better, decimals in TRADE_OFFS:
         points = _trade_off_points(summaries, project, field)
-        svg = tradeoff_svg(title, points, higher_is_better)
+        svg = tradeoff_svg(title, points, higher_is_better, decimals)
         if not svg:
             continue
         path = f"plots/{slug}.svg"
         files[path] = svg
         lines.append(f"![{title} against parameters]({PLOTS_BASE}/{path})")
     return "\n\n".join(lines), files
+
+
+def wins_plot(
+    summaries: list[ModelScore], winners: dict[str, tuple[str, float]]
+) -> tuple[str, dict[str, str]]:
+    """Markdown that embeds the best-per-language bar chart, and its SVG file by repository path."""
+    counts = Counter(model for model, _ in winners.values())
+    ordered = sorted(((s.model, counts.get(s.model, 0)) for s in summaries), key=lambda item: -item[1])
+    svg = wins_svg("Best model per language", ordered)
+    if not svg:
+        return "", {}
+    path = "plots/best_per_language.svg"
+    return f"![Languages where each model is best]({PLOTS_BASE}/{path})", {path: svg}
 
 
 def _trade_off_points(summaries: list[ModelScore], project: Project, field: str) -> list[Point]:
@@ -140,41 +153,55 @@ def run(no_upload: bool) -> None:
     summaries, winners, common_count = summarize(project, score_rows(files))
     updated = datetime.now().strftime("%Y-%m-%d %H:%M CET")
     trade_offs, plot_files = trade_off_plots(summaries, project)
+    wins_md, wins_files = wins_plot(summaries, winners)
+    plot_files.update(wins_files)
     card = render(
         updated,
-        (
-            f"Overall chrF++ uses the {common_count} languages every scored model covers.\n\n"
-            if summaries
-            else ""
-        )
-        + results_table(summaries),
-        winners_table(winners),
+        _results_section(summaries, common_count),
+        "\n\n".join(part for part in (wins_md, winners_table(winners)) if part),
         trade_offs=trade_offs,
         split_note=split_note(project),
     )
     out = ROOT / "docs" / "dataset_card.md"
+    _write_local(out, card, plot_files)
+    print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}; plots: {len(plot_files)}")
+    if not no_upload:
+        _upload(out, card, plot_files, updated)
+        print("uploaded README.md")
+
+
+def _results_section(summaries: list[ModelScore], common_count: int) -> str:
+    note = (
+        f"Overall chrF++ uses the {common_count} languages every scored model covers.\n\n"
+        if summaries
+        else ""
+    )
+    return note + results_table(summaries)
+
+
+def _write_local(out: Path, card: str, plot_files: dict[str, str]) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(card, encoding="utf-8")
     for path, svg in plot_files.items():
         local = ROOT / "docs" / path
         local.parent.mkdir(parents=True, exist_ok=True)
         local.write_text(svg, encoding="utf-8")
-    print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}; plots: {len(plot_files)}")
-    if not no_upload:
-        api = HfApi()
-        for path, svg in plot_files.items():
-            api.upload_file(
-                path_or_fileobj=svg.encode("utf-8"),
-                path_in_repo=path,
-                repo_id=REPO,
-                repo_type="dataset",
-                commit_message=f"Trade-off plot {path} ({updated})",
-            )
+
+
+def _upload(out: Path, card: str, plot_files: dict[str, str], updated: str) -> None:
+    api = HfApi()
+    for path, svg in plot_files.items():
         api.upload_file(
-            path_or_fileobj=str(out),
-            path_in_repo="README.md",
+            path_or_fileobj=svg.encode("utf-8"),
+            path_in_repo=path,
             repo_id=REPO,
             repo_type="dataset",
-            commit_message=f"Update dataset card ({updated})",
+            commit_message=f"Plot {path} ({updated})",
         )
-        print("uploaded README.md")
+    api.upload_file(
+        path_or_fileobj=str(out),
+        path_in_repo="README.md",
+        repo_id=REPO,
+        repo_type="dataset",
+        commit_message=f"Update dataset card ({updated})",
+    )

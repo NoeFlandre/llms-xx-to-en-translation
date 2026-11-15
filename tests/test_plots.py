@@ -1,4 +1,6 @@
-from xx_to_en.plots import Point, pareto_frontier, tradeoff_svg
+import re
+
+from xx_to_en.plots import Point, pareto_frontier, tradeoff_svg, wins_svg
 
 
 def test_frontier_keeps_points_no_smaller_model_beats():
@@ -24,12 +26,28 @@ def test_svg_labels_each_model_and_draws_the_frontier():
     assert "big" in svg
     assert "odd&amp;one" in svg
     assert "<polyline" in svg
-    assert "higher is better" in svg
+    assert "Higher is better" in svg
 
 
 def test_svg_says_when_lower_is_better():
     svg = tradeoff_svg("MetricX-24", [Point("a", 1.0, 2.0), Point("b", 10.0, 1.0)], higher_is_better=False)
-    assert "lower is better" in svg
+    assert "Lower is better" in svg
+
+
+def test_labels_near_the_right_edge_are_set_to_the_left_of_their_marker():
+    points = [Point("small", 0.5, 30.0), Point("largest", 50.0, 50.0)]
+    svg = tradeoff_svg("chrF++", points, higher_is_better=True)
+    assert 'text-anchor="end"' in svg
+    assert 'text-anchor="start"' in svg
+
+
+def test_decimals_follow_the_metric():
+    points = [Point("a", 1.0, 2.5), Point("b", 10.0, 3.5)]
+    three = tradeoff_svg("COMET-22", points, higher_is_better=True, decimals=3)
+    one = tradeoff_svg("chrF++", points, higher_is_better=True, decimals=1)
+    assert re.search(r">\d\.\d{3}</text>", three)
+    assert re.search(r">\d\.\d</text>", one)
+    assert not re.search(r">\d\.\d{3}</text>", one)
 
 
 def test_svg_without_points_is_empty():
@@ -40,3 +58,14 @@ def test_svg_with_one_model_draws_no_frontier_line():
     svg = tradeoff_svg("chrF++", [Point("only", 3.0, 40.0)], higher_is_better=True)
     assert "<polyline" not in svg
     assert "only" in svg
+
+
+def test_wins_chart_lists_every_model_with_its_count():
+    svg = wins_svg("Best model per language", [("gemma-4-31b-it", 5), ("hy-mt2-7b", 0)])
+    assert "gemma-4-31b-it" in svg
+    assert ">5</text>" in svg
+    assert "hy-mt2-7b" in svg
+
+
+def test_wins_chart_is_empty_without_models():
+    assert wins_svg("Best model per language", []) == ""
