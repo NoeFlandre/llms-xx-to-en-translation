@@ -1,6 +1,6 @@
 import re
 
-from xx_to_en.plots import Point, pareto_frontier, tradeoff_svg, wins_svg
+from xx_to_en.plots import Point, _label_box, _placements, _scale, pareto_frontier, tradeoff_svg, wins_svg
 
 
 def test_frontier_keeps_points_no_smaller_model_beats():
@@ -48,6 +48,21 @@ def test_decimals_follow_the_metric():
     assert re.search(r">\d\.\d{3}</text>", three)
     assert re.search(r">\d\.\d</text>", one)
     assert not re.search(r">\d\.\d{3}</text>", one)
+
+
+def test_crowded_labels_do_not_overlap_each_other():
+    points = [
+        Point("alpha-model", 8.0, 66.0),
+        Point("bravo-model", 8.1, 66.05),
+        Point("charlie-model", 8.2, 65.95),
+        Point("delta-model", 8.05, 66.1),
+        Point("far", 1.0, 50.0),
+        Point("farther", 30.0, 70.0),
+    ]
+    placed = _placements(_scale(points), points)
+    boxes = [_label_box(point.label, *position) for point, position in zip(points, placed, strict=True)]
+    for index, box in enumerate(boxes):
+        assert not any(box.overlaps(other) for other in boxes[index + 1 :])
 
 
 def test_svg_without_points_is_empty():

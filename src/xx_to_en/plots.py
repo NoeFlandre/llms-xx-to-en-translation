@@ -13,7 +13,6 @@ LEFT = 72
 RIGHT = 24
 TOP = 64
 BOTTOM = 64
-LABEL_FLIP = 150
 X_TICKS = (0.5, 1, 2, 5, 10, 20, 50, 100)
 POINT = "#4c72b0"
 FRONTIER = "#c44e52"
@@ -121,20 +120,97 @@ def _frontier_line(scale: _Scale, frontier: Sequence[Point]) -> str:
     )
 
 
-def _marker(scale: _Scale, point: Point, colour: str) -> str:
+CANDIDATES = (
+    (9, 4, "start"),
+    (-9, 4, "end"),
+    (0, -9, "middle"),
+    (0, 17, "middle"),
+    (9, -9, "start"),
+    (-9, -9, "end"),
+    (9, 17, "start"),
+    (-9, 17, "end"),
+)
+MARKER_RADIUS = 5
+LABEL_ASCENT = 9
+LABEL_DESCENT = 3
+CHAR_WIDTH = 6.3
+MARGIN = 4
+OUTSIDE_PLOT = 1e6
+
+
+@dataclass(frozen=True)
+class _Box:
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+    def overlap_area(self, other: _Box) -> float:
+        width = min(self.x1, other.x1) - max(self.x0, other.x0)
+        height = min(self.y1, other.y1) - max(self.y0, other.y0)
+        return max(width, 0.0) * max(height, 0.0)
+
+    def overlaps(self, other: _Box) -> bool:
+        return self.overlap_area(other) > 0
+
+    def inside_plot(self) -> bool:
+        return (
+            self.x0 >= MARGIN and self.x1 <= WIDTH - MARGIN and self.y0 >= TOP and self.y1 <= HEIGHT - BOTTOM
+        )
+
+
+def _label_box(text: str, x: float, y: float, anchor: str) -> _Box:
+    width = len(text) * CHAR_WIDTH
+    left = {"start": x, "end": x - width, "middle": x - width / 2}[anchor]
+    return _Box(left, y - LABEL_ASCENT, left + width, y + LABEL_DESCENT)
+
+
+def _marker_box(x: float, y: float) -> _Box:
+    return _Box(x - MARKER_RADIUS, y - MARKER_RADIUS, x + MARKER_RADIUS, y + MARKER_RADIUS)
+
+
+def _options(x: float, y: float) -> list[tuple[float, float, str]]:
+    return [(x + dx, y + dy, anchor) for dx, dy, anchor in CANDIDATES]
+
+
+def _cost(text: str, option: tuple[float, float, str], taken: list[_Box]) -> float:
+    box = _label_box(text, *option)
+    outside = 0.0 if box.inside_plot() else OUTSIDE_PLOT
+    return outside + sum(box.overlap_area(other) for other in taken)
+
+
+def _label_position(point: Point, x: float, y: float, taken: list[_Box]) -> tuple[float, float, str]:
+    return min(_options(x, y), key=lambda option: _cost(point.label, option, taken))
+
+
+def _placements(scale: _Scale, points: Sequence[Point]) -> list[tuple[float, float, str]]:
+    taken = [_marker_box(scale.x_of(p.params_b), scale.y_of(p.value)) for p in points]
+    placed: list[tuple[float, float, str]] = []
+    for point in points:
+        x, y = scale.x_of(point.params_b), scale.y_of(point.value)
+        position = _label_position(point, x, y, taken)
+        taken.append(_label_box(point.label, *position))
+        placed.append(position)
+    return placed
+
+
+def _marker(scale: _Scale, point: Point, colour: str, position: tuple[float, float, str]) -> str:
     x, y = scale.x_of(point.params_b), scale.y_of(point.value)
-    left = x > WIDTH - RIGHT - LABEL_FLIP
-    label_x, anchor = (x - 9, "end") if left else (x + 9, "start")
+    label_x, label_y, anchor = position
     return (
         f'<circle cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{colour}" stroke="white" stroke-width="1.5"/>'
-        f'<text x="{label_x:.1f}" y="{y + 4:.1f}" font-size="11" fill="{TEXT}" text-anchor="{anchor}" '
+        f'<text x="{label_x:.1f}" y="{label_y:.1f}" font-size="11" fill="{TEXT}" text-anchor="{anchor}" '
         'stroke="white" stroke-width="3" paint-order="stroke">'
         f"{escape(point.label)}</text>"
     )
 
 
 def _markers(scale: _Scale, points: Sequence[Point], frontier_labels: set[str]) -> list[str]:
-    return [_marker(scale, p, FRONTIER if p.label in frontier_labels else POINT) for p in points]
+    placed = _placements(scale, points)
+    return [
+        _marker(scale, p, FRONTIER if p.label in frontier_labels else POINT, position)
+        for p, position in zip(points, placed, strict=True)
+    ]
 
 
 def tradeoff_svg(title: str, points: Sequence[Point], higher_is_better: bool, decimals: int = 2) -> str:
