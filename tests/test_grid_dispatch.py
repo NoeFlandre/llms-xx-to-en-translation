@@ -94,6 +94,14 @@ def test_state_round_trips_and_defaults_when_missing(tmp_path, monkeypatch):
     assert dispatch.load_state() == state
 
 
+def test_a_job_that_uploads_resets_its_pair_counter(monkeypatch):
+    monkeypatch.setattr(dispatch, "job_state", lambda site, job_id: "Terminated")
+    state = _state(jobs=[_job()], no_progress={"m|b": 2})
+    dispatch.refresh_jobs(state, now=0.0, remaining={"m|b": 2})
+    assert state["jobs"] == []
+    assert state["no_progress"] == {"m|b": 0}
+
+
 def test_job_state_reads_the_oar_state_line(monkeypatch):
     monkeypatch.setattr(dispatch, "ssh", lambda site, command: "state = Running\n")
     assert dispatch.job_state("nancy", 5) == "Running"

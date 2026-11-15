@@ -117,8 +117,10 @@ def refresh_jobs(state: dict[str, Any], now: float, remaining: dict[str, int]) -
 
 
 def _count_if_no_progress(state: dict[str, Any], job: dict[str, Any], remaining: dict[str, int]) -> None:
-    if remaining.get(job["model"], 0) >= job["remaining_at_submit"]:
-        no_progress = state.setdefault("no_progress", {})
+    no_progress = state.setdefault("no_progress", {})
+    if remaining.get(job["model"], 0) < job["remaining_at_submit"]:
+        no_progress[job["model"]] = 0
+    else:
         no_progress[job["model"]] = no_progress.get(job["model"], 0) + 1
 
 
