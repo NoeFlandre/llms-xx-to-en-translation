@@ -17,6 +17,7 @@ from xx_to_en.cli import Project
 from xx_to_en.config import ModelConfig
 from xx_to_en.languages import corpus_languages
 from xx_to_en.plan import Shard
+from xx_to_en.plots import Point, tradeoff_svg
 from xx_to_en.report import per_language_winner, volume_weighted_mean
 from xx_to_en.results_store import repo_files, score_path, shard_path
 from xx_to_en.tables import read_table
@@ -115,12 +116,44 @@ def _winners(per_language: dict[str, dict[str, float]]) -> dict[str, tuple[str, 
     return {lang: (model, per_language[model][lang]) for lang, model in best.items()}
 
 
+TRADE_OFFS = (
+    ("volume_chrf", "Volume-weighted chrF++", "overall_chrf_pp", True),
+    ("comet22", "COMET-22", "comet22", True),
+    ("metricx24", "MetricX-24", "metricx24", False),
+)
+PLOTS_BASE = f"https://huggingface.co/datasets/{REPO}/resolve/main"
+
+
+def trade_off_plots(summaries: list[ModelScore], project: Project) -> tuple[str, dict[str, str]]:
+    """Markdown that embeds one trade-off plot per metric, and the SVG files behind it by repository path."""
+    lines: list[str] = []
+    files: dict[str, str] = {}
+    for slug, title, field, higher_is_better in TRADE_OFFS:
+        points = _trade_off_points(summaries, project, field)
+        svg = tradeoff_svg(title, points, higher_is_better)
+        if not svg:
+            continue
+        path = f"plots/{slug}.svg"
+        files[path] = svg
+        lines.append(f"![{title} against parameters]({PLOTS_BASE}/{path})")
+    return "\n\n".join(lines), files
+
+
+def _trade_off_points(summaries: list[ModelScore], project: Project, field: str) -> list[Point]:
+    return [
+        Point(s.model, project.models[s.model].params_b, getattr(s, field))
+        for s in summaries
+        if getattr(s, field) is not None
+    ]
+
+
 def run(no_upload: bool) -> None:
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     files = repo_files(REPO)
     grid = progress(project, files)
     summaries, winners, common_count = summarize(project, score_rows(files))
     updated = datetime.now().strftime("%Y-%m-%d %H:%M CET")
+    trade_offs, plot_files = trade_off_plots(summaries, project)
     card = render(
         updated,
         progress_table(grid),
@@ -132,13 +165,27 @@ def run(no_upload: bool) -> None:
         + results_table(summaries),
         winners_table(winners),
         known_gaps=KNOWN_GAPS,
+        trade_offs=trade_offs,
     )
     out = ROOT / "docs" / "dataset_card.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(card, encoding="utf-8")
-    print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}")
+    for path, svg in plot_files.items():
+        local = ROOT / "docs" / path
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text(svg, encoding="utf-8")
+    print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}; plots: {len(plot_files)}")
     if not no_upload:
-        HfApi().upload_file(
+        api = HfApi()
+        for path, svg in plot_files.items():
+            api.upload_file(
+                path_or_fileobj=svg.encode("utf-8"),
+                path_in_repo=path,
+                repo_id=REPO,
+                repo_type="dataset",
+                commit_message=f"Trade-off plot {path} ({updated})",
+            )
+        api.upload_file(
             path_or_fileobj=str(out),
             path_in_repo="README.md",
             repo_id=REPO,

@@ -98,8 +98,22 @@ KNOWN_GAPS = (
 )
 
 
-def render(updated: str, progress: str, results: str, winners: str, known_gaps: str = "") -> str:
+TRADE_OFF_NOTE = (
+    "Each point is one model. The red line is the Pareto frontier: no other model is both smaller and "
+    "better. Parameters are the total parameter count from each model's config."
+)
+
+
+def render(
+    updated: str,
+    progress: str,
+    results: str,
+    winners: str,
+    known_gaps: str = "",
+    trade_offs: str = "",
+) -> str:
     gaps = f"## Known gaps\n\n{known_gaps}\n\n" if known_gaps else ""
+    trade = f"## Trade-offs\n\n{TRADE_OFF_NOTE}\n\n{trade_offs}\n\n" if trade_offs else ""
     return f"""---
 license: cc-by-sa-4.0
 pretty_name: llms-xx-to-en-translation
@@ -128,7 +142,7 @@ Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
 {winners}
 
-## Files
+{trade}## Files
 
 - `results/<model>/<benchmark>/<shard>.parquet`: hypotheses and token counts
 - `scores/<model>/<benchmark>/<shard>.parquet`: per-segment scores and failure flags
