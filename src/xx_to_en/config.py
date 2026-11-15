@@ -33,6 +33,8 @@ class ModelConfig(BaseModel):
     # vLLM batch cap; set where the default (1024) exceeds the model's cache capacity on an 80 GB GPU.
     max_num_seqs: int | None = Field(default=None, gt=0)
     gpu_memory_utilization: float | None = Field(default=None, gt=0, le=1)  # vLLM share of GPU memory
+    # Benchmark -> languages per part for shards that did not finish (see xx_to_en.plan.build_shards).
+    split_shards: dict[str, int] = Field(default_factory=dict)
     official_languages: list[str] | Literal["pending", "all"]
 
 

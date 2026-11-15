@@ -18,7 +18,6 @@ from huggingface_hub import HfApi, hf_hub_download
 from xx_to_en.card import KNOWN_GAPS, Cell, ModelScore, progress_table, render, results_table, winners_table
 from xx_to_en.cli import Project
 from xx_to_en.languages import corpus_languages
-from xx_to_en.plan import build_shards
 from xx_to_en.report import per_language_winner, volume_weighted_mean
 from xx_to_en.results_store import repo_files, score_path, shard_path
 from xx_to_en.tables import read_table
@@ -33,7 +32,7 @@ def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
     for name, model in project.models.items():
         cells: dict[str, Cell] = {}
         if model.enabled:
-            shards = build_shards(name, project.plan(model))
+            shards = project.shards(model, lambda shard: shard_path(shard) in files)
             for benchmark in project.benchmarks:
                 own = [s for s in shards if s.benchmark == benchmark]
                 cells[benchmark] = Cell(

@@ -44,3 +44,31 @@ def test_pending_keeps_plan_order_and_drops_done_shards():
 
 def test_empty_plan_has_no_shards():
     assert build_shards("m", []) == []
+
+
+def test_split_cuts_unfinished_shards_into_parts_and_keeps_finished_ones_whole():
+    langs = ["ara_Arab", "ben_Beng", "deu_Latn", "fra_Latn", "ita_Latn", "jpn_Jpan"]
+    items = _items("tatoeba_xen", langs)
+    sizes = {"tatoeba_xen": 4}
+    splits = {"tatoeba_xen": 2}
+    unfinished = build_shards("m", items, sizes=sizes, splits=splits)
+    assert [s.shard_id for s in unfinished] == [
+        "tatoeba_xen-000-00",
+        "tatoeba_xen-000-01",
+        "tatoeba_xen-001-00",
+    ]
+    assert [lang for s in unfinished for lang in s.langs] == langs
+    finished = build_shards("m", items, sizes=sizes, splits=splits, is_done=lambda s: s.index == 0)
+    assert [s.shard_id for s in finished] == ["tatoeba_xen-000", "tatoeba_xen-001-00"]
+    assert finished[0].langs == ("ara_Arab", "ben_Beng", "deu_Latn", "fra_Latn")
+
+
+def test_split_applies_only_to_benchmarks_it_names():
+    items = _items("ntrex_128", ["l00_Latn", "l01_Latn", "l02_Latn"]) + _items("wmt22_xen", ["ces_Latn"])
+    shards = build_shards("m", items, splits={"ntrex_128": 1})
+    assert [s.shard_id for s in shards] == [
+        "ntrex_128-000-00",
+        "ntrex_128-000-01",
+        "ntrex_128-000-02",
+        "wmt22_xen-000",
+    ]

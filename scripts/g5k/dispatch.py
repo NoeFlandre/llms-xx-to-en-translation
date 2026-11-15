@@ -27,7 +27,6 @@ import yaml
 from xx_to_en.cli import Project
 from xx_to_en.dispatch import GpuPool, Pending, choose_placements, crosses_boundary, jobs_for_pair
 from xx_to_en.gpu_probe import count_free
-from xx_to_en.plan import build_shards
 from xx_to_en.results_store import repo_files, score_path, shard_path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -130,7 +129,7 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
     for name, model in project.models.items():
         if not model.enabled:
             continue
-        for shard in build_shards(name, project.plan(model)):
+        for shard in project.shards(model, lambda shard: shard_path(shard) in done):
             counts = grouped.setdefault((name, shard.benchmark), [0, 0])
             counts[0] += shard_path(shard) not in done
             counts[1] += score_path(shard) not in done
