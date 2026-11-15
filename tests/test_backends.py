@@ -113,7 +113,7 @@ def test_vllm_generate_tokenizes_prompts_and_builds_results(fake_vllm: None):
 
 def test_vllm_generate_requires_one_budget_per_prompt(fake_vllm: None):
     backend = VllmBackend(_model())
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="shorter than"):
         backend.generate([PromptInput("a"), PromptInput("b")], [8])
 
 

@@ -22,7 +22,9 @@ def test_results_table_sorts_by_volume_weighted_score_and_formats_missing_values
     ]
     table = results_table(rows)
     assert table.index("| high |") < table.index("| low |")
-    assert "52.5" in table and "0.851" in table and "2.0%" in table
+    assert "52.5" in table
+    assert "0.851" in table
+    assert "2.0%" in table
     assert "—" in table
 
 

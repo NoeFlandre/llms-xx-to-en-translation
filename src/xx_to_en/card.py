@@ -67,11 +67,11 @@ def results_table(rows: Sequence[ModelScore]) -> str:
         "| Model | chrF++ ↑ | Volume-weighted chrF++ ↑ | COMET-22 ↑ | MetricX-24 ↓ | Failures | Segments |",
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
-    for row in sorted(rows, key=lambda r: -r.overall_chrf_pp):
-        lines.append(
-            f"| {row.model} | {row.chrf_pp:.1f} | {row.overall_chrf_pp:.1f} | {fmt(row.comet22, 3)} "
-            f"| {fmt(row.metricx24, 2)} | {100 * row.failure_rate:.1f}% | {row.segments:,} |"
-        )
+    lines.extend(
+        f"| {row.model} | {row.chrf_pp:.1f} | {row.overall_chrf_pp:.1f} | {fmt(row.comet22, 3)} "
+        f"| {fmt(row.metricx24, 2)} | {100 * row.failure_rate:.1f}% | {row.segments:,} |"
+        for row in sorted(rows, key=lambda r: -r.overall_chrf_pp)
+    )
     return "\n".join(lines)
 
 

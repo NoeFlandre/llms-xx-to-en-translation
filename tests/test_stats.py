@@ -30,7 +30,9 @@ def test_paired_identical_systems_have_zero_difference():
     scores = [1.0, 2.0, 3.0, 4.0]
     estimate = paired_bootstrap_diff(scores, scores, n_resamples=100)
     assert estimate == paired_bootstrap_diff(scores, scores, n_resamples=100)
-    assert estimate.value == 0.0 and estimate.low == 0.0 and estimate.high == 0.0
+    assert estimate.value == 0.0
+    assert estimate.low == 0.0
+    assert estimate.high == 0.0
 
 
 def test_paired_clear_winner_excludes_zero():

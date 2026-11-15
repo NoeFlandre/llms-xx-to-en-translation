@@ -66,7 +66,8 @@ def test_all_value_means_every_corpus_language():
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     gemma = project.model("gemma-4-31b-it")
     supported = project.supported_languages(gemma)
-    assert "fra_Latn" in supported and "eng_Latn" not in supported
+    assert "fra_Latn" in supported
+    assert "eng_Latn" not in supported
     assert len(supported) == 94
 
 
@@ -260,7 +261,8 @@ def test_work_command_without_budget_generates_nothing(project, tmp_path, monkey
     message = cli.work_command(project, _work_args(tmp_path, "--budget-min", "0"))
 
     assert message == f"{MODEL}: generated 0 of {total} pending shards"
-    assert generated == [] and uploads == []
+    assert generated == []
+    assert uploads == []
     assert not (tmp_path / "manifest.json").exists()
 
 

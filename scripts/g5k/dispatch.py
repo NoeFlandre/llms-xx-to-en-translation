@@ -49,6 +49,7 @@ def ssh(site: str, command: str) -> str:
         capture_output=True,
         text=True,
         timeout=300,
+        check=False,  # callers read stdout; empty output means the call failed
     )
     return "\n".join(line for line in result.stdout.splitlines() if "bashrc" not in line)
 

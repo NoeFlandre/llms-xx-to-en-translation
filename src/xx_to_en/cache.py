@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -38,7 +37,7 @@ class OutputCache:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(".tmp")
         temporary.write_text(json.dumps({"output": output}, ensure_ascii=False), encoding="utf-8")
-        os.replace(temporary, path)
+        temporary.replace(path)
 
     def get_or_compute(self, key: str, compute: Callable[[], str]) -> str:
         cached = self.get(key)

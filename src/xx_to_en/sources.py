@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from xx_to_en.benchmarks import (
@@ -34,8 +35,7 @@ def _hub_file(repo: str, filename: str, revision: str | None = None) -> str:
 
 
 def _lines(path: str) -> list[str]:
-    with open(path, encoding="utf-8") as handle:
-        return handle.read().splitlines()
+    return Path(path).read_text(encoding="utf-8").splitlines()
 
 
 def _load_rows(repo: str, config: str) -> list[dict[str, Any]]:

@@ -59,11 +59,11 @@ def test_max_new_tokens_scales_and_clamps():
 
 
 def test_max_new_tokens_rejects_bad_inputs():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="non-negative"):
         max_new_tokens(-1)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="ratio must be positive"):
         max_new_tokens(5, ratio=0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="floor must not exceed ceiling"):
         max_new_tokens(5, floor=100, ceiling=10)
 
 

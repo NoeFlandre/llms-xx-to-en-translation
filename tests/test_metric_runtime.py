@@ -66,7 +66,8 @@ class _FakeMetricXTokenizer:
     def __call__(
         self, text: str, *, max_length: int, truncation: bool, padding: bool
     ) -> dict[str, list[int]]:
-        assert truncation is True and padding is False
+        assert truncation is True
+        assert padding is False
         ids = [len(word) for word in text.split()][:max_length]
         return {"input_ids": [*ids, 1]}
 
@@ -163,7 +164,8 @@ def test_metricx_splits_a_batch_that_runs_out_of_memory(monkeypatch: pytest.Monk
     scores = _scorers(batch=4).metricx(inputs)
 
     assert scores == [float(len(metricx_text(row).split())) for row in inputs]
-    assert model.batch_lengths and all(len(batch) == 1 for batch in model.batch_lengths)
+    assert model.batch_lengths
+    assert all(len(batch) == 1 for batch in model.batch_lengths)
 
 
 def test_metricx_reraises_out_of_memory_for_a_single_row(monkeypatch: pytest.MonkeyPatch):

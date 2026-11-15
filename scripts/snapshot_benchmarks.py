@@ -43,7 +43,7 @@ def _get_json(url: str) -> Any:
     token = _token()
     if token:
         request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310 - fixed HTTPS hosts
+    with urllib.request.urlopen(request, timeout=60) as response:  # fixed HTTPS hosts
         return json.load(response)
 
 

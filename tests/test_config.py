@@ -48,7 +48,7 @@ def test_name_must_match_file_stem(tmp_path: Path):
 def test_unknown_key_is_rejected(tmp_path: Path):
     source = (CONFIGS / "models" / "lfm3-1.7b.yaml").read_text(encoding="utf-8")
     (tmp_path / "lfm3-1.7b.yaml").write_text(source + "surprise: 1\n", encoding="utf-8")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="surprise"):
         load_models(tmp_path)
 
 
@@ -87,5 +87,5 @@ def test_max_num_seqs_is_optional_and_positive():
     }
     assert ModelConfig.model_validate(base).max_num_seqs is None
     assert ModelConfig.model_validate({**base, "max_num_seqs": 256}).max_num_seqs == 256
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="max_num_seqs"):
         ModelConfig.model_validate({**base, "max_num_seqs": 0})
