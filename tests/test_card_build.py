@@ -1,15 +1,10 @@
 from pathlib import Path
-from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
 from xx_to_en import card_build
-from xx_to_en.card import Cell
 from xx_to_en.cli import Project
 from xx_to_en.languages import corpus_languages
-from xx_to_en.plan import Shard
-from xx_to_en.results_store import score_path, shard_path
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,25 +12,6 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def project():
     return Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
-
-
-def test_progress_leaves_out_disabled_models():
-    fake: Any = SimpleNamespace(models={"m": SimpleNamespace(enabled=False)}, benchmarks={"b": None})
-    assert card_build.progress(fake, set()) == {}
-
-
-def test_progress_counts_planned_shards_per_benchmark(project):
-    name = next(n for n, model in project.models.items() if model.enabled)
-    cells = card_build.progress(project, set())[name]
-    assert set(cells) == set(project.benchmarks)
-    assert all(cell.generated == 0 and cell.scored == 0 for cell in cells.values())
-    assert sum(cell.total for cell in cells.values()) > 0
-
-
-def test_cell_counts_generated_and_scored_shards():
-    own = [Shard("m", "b", 0, ("fra_Latn",)), Shard("m", "b", 1, ("deu_Latn",))]
-    files = {shard_path(own[0]), score_path(own[0]), shard_path(own[1])}
-    assert card_build._cell(own, files) == Cell(generated=2, scored=1, total=2)
 
 
 def test_language_means_average_each_language(monkeypatch):

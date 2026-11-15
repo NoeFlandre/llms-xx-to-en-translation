@@ -12,41 +12,17 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download
 
-from xx_to_en.card import Cell, ModelScore, progress_table, render, results_table, winners_table
+from xx_to_en.card import ModelScore, render, results_table, winners_table
 from xx_to_en.cli import Project
-from xx_to_en.config import ModelConfig
 from xx_to_en.languages import corpus_languages
-from xx_to_en.plan import Shard
 from xx_to_en.plots import Point, tradeoff_svg
 from xx_to_en.report import per_language_winner, volume_weighted_mean
-from xx_to_en.results_store import repo_files, score_path, shard_path
+from xx_to_en.results_store import repo_files
 from xx_to_en.tables import read_table
 
 ROOT = Path(__file__).resolve().parents[2]
 REPO = "NoeFlandre/llms-xx-to-en-translation"
 FAILURE_FLAGS = ("empty", "repetition_loop", "length_ratio_outlier", "untranslated_copy", "wrong_language")
-
-
-def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
-    return {
-        name: _model_cells(project, model, files) for name, model in project.models.items() if model.enabled
-    }
-
-
-def _model_cells(project: Project, model: ModelConfig, files: set[str]) -> dict[str, Cell]:
-    shards = project.shards(model, files)
-    return {
-        benchmark: _cell([s for s in shards if s.benchmark == benchmark], files)
-        for benchmark in project.benchmarks
-    }
-
-
-def _cell(own: list[Shard], files: set[str]) -> Cell:
-    return Cell(
-        generated=sum(shard_path(s) in files for s in own),
-        scored=sum(score_path(s) in files for s in own),
-        total=len(own),
-    )
 
 
 def score_rows(files: set[str]) -> dict[str, list[dict]]:
@@ -161,13 +137,11 @@ def _trade_off_points(summaries: list[ModelScore], project: Project, field: str)
 def run(no_upload: bool) -> None:
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     files = repo_files(REPO)
-    grid = progress(project, files)
     summaries, winners, common_count = summarize(project, score_rows(files))
     updated = datetime.now().strftime("%Y-%m-%d %H:%M CET")
     trade_offs, plot_files = trade_off_plots(summaries, project)
     card = render(
         updated,
-        progress_table(grid),
         (
             f"Overall chrF++ uses the {common_count} languages every scored model covers.\n\n"
             if summaries

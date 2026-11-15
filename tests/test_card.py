@@ -1,18 +1,4 @@
-from xx_to_en.card import Cell, ModelScore, bar, progress_table, render, results_table, winners_table
-
-
-def test_bar_scales_and_handles_empty_totals():
-    assert bar(0, 4) == "░░░░░░"
-    assert bar(4, 4) == "██████"
-    assert bar(0, 0) == "—"
-
-
-def test_progress_table_shows_generated_over_total_and_pending_cells():
-    grid = {"m": {"flores_plus_devtest": Cell(2, 0, 4)}}
-    table = progress_table(grid)
-    assert "2/4" in table
-    assert "| m |" in table
-    assert "—" in table
+from xx_to_en.card import ModelScore, render, results_table, winners_table
 
 
 def test_results_table_sorts_by_volume_weighted_score_and_formats_missing_values():
@@ -38,21 +24,18 @@ def test_winners_table_is_collapsible_and_sorted_by_language():
     assert table.index("deu_Latn") < table.index("fra_Latn")
 
 
-def test_render_lists_known_gaps_only_when_given():
-    assert "## Known gaps" not in render("now", "P", "R", "")
-    card = render("now", "P", "R", "", known_gaps="NLLB Tatoeba is missing.")
-    assert card.index("## Known gaps") < card.index("## Results")
-    assert "NLLB Tatoeba is missing." in card
-
-
 def test_render_has_front_matter_and_sections():
-    card = render("2026-11-13 14:00 CET", "P", "R", "")
+    card = render("2026-11-13 14:00 CET", "R", "")
     assert card.startswith("---\nlicense: cc-by-sa-4.0")
-    for section in ("## Progress", "## Results", "## Files", "## Method"):
+    for section in ("## Results", "## Method", "## Data"):
         assert section in card
+    assert "## Progress" not in card
+    assert "## Known gaps" not in card
 
 
-def test_render_places_the_split_note_under_progress():
-    card = render("now", "P", "R", "", split_note="`nllb-200-3.3b`: tatoeba shards are cut into parts.")
-    assert card.index("`nllb-200-3.3b`") < card.index("## Results")
-    assert "`nllb-200-3.3b`" not in render("now", "P", "R", "")
+def test_render_adds_trade_offs_and_split_note_only_when_given():
+    card = render("now", "R", "", trade_offs="![x](plots/x.svg)", split_note="`nllb-200-3.3b`: note")
+    assert card.index("`nllb-200-3.3b`") < card.index("## Trade-offs") < card.index("## Method")
+    bare = render("now", "R", "")
+    assert "## Trade-offs" not in bare
+    assert "`nllb-200-3.3b`" not in bare

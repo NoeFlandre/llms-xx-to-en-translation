@@ -1,25 +1,11 @@
-"""Dataset card rendering: a progress grid, a results table and per-language winners. Plain Markdown."""
+"""Dataset card rendering: results, per-language winners and trade-off plots. Plain Markdown."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
-BENCHMARK_LABELS: Mapping[str, str] = {
-    "flores_plus_devtest": "FLORES+",
-    "ntrex_128": "NTREX-128",
-    "wmt22_xen": "WMT22",
-    "wmt23_xen": "WMT23",
-    "tatoeba_xen": "Tatoeba",
-}
 PENDING = "—"
-
-
-@dataclass(frozen=True)
-class Cell:
-    generated: int
-    scored: int
-    total: int
 
 
 @dataclass(frozen=True)
@@ -33,36 +19,13 @@ class ModelScore:
     segments: int
 
 
-def bar(done: int, total: int, width: int = 6) -> str:
-    if total == 0:
-        return PENDING
-    filled = round(width * done / total)
-    return "█" * filled + "░" * (width - filled)
-
-
 def fmt(value: float | None, digits: int) -> str:
     return PENDING if value is None else f"{value:.{digits}f}"
 
 
-def progress_table(grid: Mapping[str, Mapping[str, Cell]]) -> str:
-    """Shards generated per model and benchmark, with a bar for each cell."""
-    header = "| Model | " + " | ".join(BENCHMARK_LABELS.values()) + " |"
-    lines = [header, "|---|" + "---|" * len(BENCHMARK_LABELS)]
-    for model, cells in grid.items():
-        row = []
-        for benchmark in BENCHMARK_LABELS:
-            cell = cells.get(benchmark)
-            if cell is None or cell.total == 0:
-                row.append(PENDING)
-            else:
-                row.append(f"{bar(cell.generated, cell.total)} {cell.generated}/{cell.total}")
-        lines.append(f"| {model} | " + " | ".join(row) + " |")
-    return "\n".join(lines)
-
-
 def results_table(rows: Sequence[ModelScore]) -> str:
     if not rows:
-        return "_No scores yet. Hypotheses are generated first; scores follow on bf16 GPUs._"
+        return "_No scores yet._"
     lines = [
         "| Model | chrF++ ↑ | Volume-weighted chrF++ ↑ | COMET-22 ↑ | MetricX-24 ↓ | Failures | Segments |",
         "|---|---:|---:|---:|---:|---:|---:|",
@@ -99,16 +62,13 @@ TRADE_OFF_NOTE = (
 
 def render(
     updated: str,
-    progress: str,
     results: str,
     winners: str,
-    known_gaps: str = "",
     trade_offs: str = "",
     split_note: str = "",
 ) -> str:
-    gaps = f"## Known gaps\n\n{known_gaps}\n\n" if known_gaps else ""
-    trade = f"## Trade-offs\n\n{TRADE_OFF_NOTE}\n\n{trade_offs}\n\n" if trade_offs else ""
     split = f"{split_note}\n\n" if split_note else ""
+    trade = f"## Trade-offs\n\n{TRADE_OFF_NOTE}\n\n{trade_offs}\n\n" if trade_offs else ""
     return f"""---
 license: cc-by-sa-4.0
 pretty_name: llms-xx-to-en-translation
@@ -122,41 +82,33 @@ tags:
 
 # llms-xx-to-en-translation
 
-Open models translating GeoReSeT corpus languages into English.
+Open translation models, evaluated on GeoReSeT corpus languages translated into English.
 [Code](https://github.com/NoeFlandre/llms-xx-to-en-translation) · updated {updated}
 
-## Progress
-
-{progress}
-
-Each cell: shards generated / total. A shard is 8 languages of one benchmark.
-
-{split}{gaps}## Results
+## Results
 
 {results}
 
-{winners}
+{split}{winners}
 
-{trade}## Files
+{trade}## Method
+
+- Benchmarks: FLORES+ devtest, NTREX-128, WMT22 and WMT23 (X→EN), and Tatoeba.
+  Shards are 8 languages of one benchmark.
+- Decoding: greedy, seed 0, thinking off, output budget 3× source tokens.
+- Metrics: chrF++ (sacrebleu); COMET-22 `Unbabel/wmt22-comet-da`; MetricX-24 hybrid XL, reference-based.
+- Failures: segments flagged as empty, repetition loops, length outliers, untranslated copies,
+  or wrong-language output (GlotLID v4).
+- Volume-weighted scores weight each language by its corpus rows.
+
+## Data
 
 - `results/<model>/<benchmark>/<shard>.parquet`: hypotheses and token counts
 - `scores/<model>/<benchmark>/<shard>.parquet`: per-segment scores and failure flags
-- `manifests/<model>/job-<id>.json`: full model config and run settings for each job
+- `manifests/<model>/job-<id>.json`: model config and run settings per job
 
-Columns: `source` is the corpus sentence, `reference` is the ground-truth English from the benchmark, and
-`hypothesis` is the generated English. Each row also carries its provenance: `model_revision`,
-`prompt_template`, `prompt_version`, `prompt_sha256`,
-`decoding`, `seed`, `budget_*`, `max_new_tokens`, `dtype`, `backend`, `software`, `gpu`, `node`, `job_id`,
-`code_commit`, `generated_at`. Generated text is in `hypothesis`; the untouched model output is in
-`raw_hypothesis`, with `finish_reason` and `truncated`.
-
-Source and reference text are included in every row, so each shard stands alone.
-Benchmark licences apply to those texts: FLORES+ CC-BY-SA-4.0, Tatoeba CC-BY,
-NTREX and WMT per their dataset cards.
-
-## Method
-
-X→EN · greedy decoding · seed 0 · thinking off · output budget 3× source tokens.
-COMET-22 `Unbabel/wmt22-comet-da` · MetricX-24 hybrid XL (reference-based) · GlotLID v4 · chrF++ (sacrebleu).
-Volume-weighted scores weight each language by its corpus rows.
+Each row has `source`, `reference` (benchmark ground truth), `hypothesis` (generated English) and
+provenance columns such as `model_revision`, `decoding`, `seed`, `gpu` and `code_commit`. Source and
+reference text are included so each shard stands alone; benchmark licences apply to them (FLORES+
+CC-BY-SA-4.0, Tatoeba CC-BY, NTREX and WMT per their dataset cards).
 """
