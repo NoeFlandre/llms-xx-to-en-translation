@@ -81,7 +81,7 @@ def test_split_applies_only_to_benchmarks_it_names():
 
 def test_project_splits_only_the_unfinished_shards_of_a_configured_benchmark():
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
-    model = project.model("madlad400-10b-mt")
+    model = project.model("nllb-200-3.3b")
     done = {shard_path(Shard(model.name, "tatoeba_xen", 0, ()))}
     ids = {s.shard_id for s in project.shards(model, done) if s.benchmark == "tatoeba_xen"}
     assert "tatoeba_xen-000" in ids
