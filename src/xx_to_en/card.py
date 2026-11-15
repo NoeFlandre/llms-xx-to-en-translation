@@ -91,13 +91,6 @@ def winners_table(winners: Mapping[str, tuple[str, float]]) -> str:
     return "\n".join(lines)
 
 
-KNOWN_GAPS = (
-    "Tatoeba is incomplete for MADLAD-400 3B and MADLAD-400 10B: some of their shards did not finish within "
-    "the one-hour job limit on the GPUs available, so those cells stay below their total. Shards that were "
-    "not generated are absent from the dataset."
-)
-
-
 TRADE_OFF_NOTE = (
     "Each point is one model. The red line is the Pareto frontier: no other model is both smaller and "
     "better. Parameters are the total parameter count from each model's config."

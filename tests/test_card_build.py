@@ -19,9 +19,9 @@ def project():
     return Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
 
 
-def test_progress_has_no_cells_for_disabled_models():
+def test_progress_leaves_out_disabled_models():
     fake: Any = SimpleNamespace(models={"m": SimpleNamespace(enabled=False)}, benchmarks={"b": None})
-    assert card_build.progress(fake, set()) == {"m": {}}
+    assert card_build.progress(fake, set()) == {}
 
 
 def test_progress_counts_planned_shards_per_benchmark(project):
@@ -115,7 +115,7 @@ def test_run_writes_the_card_and_uploads_it_unless_told_not_to(tmp_path, monkeyp
     monkeypatch.setattr(card_build, "HfApi", FakeApi)
     card_build.run(no_upload=True)
     card = tmp_path / "docs" / "dataset_card.md"
-    assert "## Known gaps" in card.read_text(encoding="utf-8")
+    assert "## Known gaps" not in card.read_text(encoding="utf-8")
     assert uploads == []
     card_build.run(no_upload=False)
     assert uploads[0]["path_in_repo"] == "README.md"

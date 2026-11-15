@@ -12,7 +12,7 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download
 
-from xx_to_en.card import KNOWN_GAPS, Cell, ModelScore, progress_table, render, results_table, winners_table
+from xx_to_en.card import Cell, ModelScore, progress_table, render, results_table, winners_table
 from xx_to_en.cli import Project
 from xx_to_en.config import ModelConfig
 from xx_to_en.languages import corpus_languages
@@ -28,12 +28,12 @@ FAILURE_FLAGS = ("empty", "repetition_loop", "length_ratio_outlier", "untranslat
 
 
 def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
-    return {name: _model_cells(project, model, files) for name, model in project.models.items()}
+    return {
+        name: _model_cells(project, model, files) for name, model in project.models.items() if model.enabled
+    }
 
 
 def _model_cells(project: Project, model: ModelConfig, files: set[str]) -> dict[str, Cell]:
-    if not model.enabled:
-        return {}
     shards = project.shards(model, files)
     return {
         benchmark: _cell([s for s in shards if s.benchmark == benchmark], files)
@@ -164,7 +164,6 @@ def run(no_upload: bool) -> None:
         )
         + results_table(summaries),
         winners_table(winners),
-        known_gaps=KNOWN_GAPS,
         trade_offs=trade_offs,
     )
     out = ROOT / "docs" / "dataset_card.md"
