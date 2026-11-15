@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,7 +32,7 @@ class ModelConfig(BaseModel):
     enabled: bool = True
     max_num_seqs: int | None = Field(default=None, gt=0)
     gpu_memory_utilization: float | None = Field(default=None, gt=0, le=1)
-    split_shards: dict[str, int] = Field(default_factory=dict)
+    split_shards: dict[str, Annotated[int, Field(gt=0)]] = Field(default_factory=dict)
     official_languages: list[str] | Literal["pending", "all"]
 
 
