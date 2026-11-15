@@ -14,7 +14,7 @@ ROWS = [
 ]
 
 
-def main() -> None:
+def run() -> str:
     scorers = Scorers(
         metricx_repo=Path(os.environ["METRICX_REPO"]),
         work=Path(os.environ["WORK"]) / "metricx",
@@ -22,8 +22,4 @@ def main() -> None:
     comet = scorers.comet([{"src": r["source"], "mt": r["hypothesis"], "ref": r["reference"]} for r in ROWS])
     metricx = scorers.metricx(ROWS)
     codes = scorers.glotlid([r["hypothesis"] for r in ROWS])
-    print(json.dumps({"comet": comet, "metricx": metricx, "glotlid": codes}), flush=True)
-
-
-if __name__ == "__main__":
-    main()
+    return json.dumps({"comet": comet, "metricx": metricx, "glotlid": codes})

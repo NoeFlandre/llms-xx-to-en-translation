@@ -4,12 +4,11 @@ A GPU resource is free when it is Alive, has no running job, and is not drained 
 Runs locally; the frontend only executes the read-only ``oarnodes`` command.
 
 Usage:
-    ssh -o BatchMode=yes nancy oarnodes | python3 scripts/g5k/free_gpus.py --site nancy
+    ssh -o BatchMode=yes nancy oarnodes | uv run xx2en free-gpus --site nancy
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import sys
@@ -69,16 +68,6 @@ def count_free(text: str) -> Counter[str]:
     return counts
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument("--site", required=True)
-    args = parser.parse_args(argv)
+def run(site: str) -> str:
     counts = count_free(sys.stdin.read())
-    print(json.dumps({"site": args.site, "free": dict(sorted(counts.items()))}, indent=2))
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    return json.dumps({"site": site, "free": dict(sorted(counts.items()))}, indent=2)

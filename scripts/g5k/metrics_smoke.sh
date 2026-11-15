@@ -8,4 +8,4 @@ export METRICX_REPO="$HOME/src/metricx"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
-"$HOME/venvs/metrics/bin/python" "$HOME/src/llms-xx-to-en-translation/scripts/g5k/metrics_smoke.py"
+"$HOME/venvs/metrics/bin/xx2en" smoke-metrics

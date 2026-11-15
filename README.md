@@ -26,20 +26,31 @@ installed on Grid5000 and are not needed here.
 
 ```bash
 uv sync
-uv run pytest --cov --cov-report=json:coverage.json
-uv run ruff check .
-uv run ty check src tests
-uv run python scripts/crap.py --threshold 6
+uv run xx2en --help
 uv run xx2en check-configs
 uv run xx2en coverage
+uv run pytest --cov --cov-report=json:coverage.json
+uv run ruff check .
+uv run ty check
+uv run xx2en crap --threshold 6
 ```
 
-Rebuild the benchmark inventory (metadata only, needs a Hugging Face token in `~/.cache/huggingface/token`
-or `HF_TOKEN`):
+Every workflow is a subcommand of `xx2en`. Run `uv run xx2en <command> --help` for its options.
 
-```bash
-python3 scripts/snapshot_benchmarks.py
-```
+| Command | What it does |
+|---|---|
+| `check-configs`, `coverage`, `plan` | validate configs, write the coverage matrix, list allowed work |
+| `run` | translate a small sample on a node (vLLM or transformers) |
+| `work`, `score` | generation and scoring jobs for one model on Grid5000 |
+| `dispatch` | keep tiny jobs running until every shard and score is in the dataset |
+| `card` | rebuild the dataset card and upload it as `README.md` (`--no-upload` to skip) |
+| `snapshot` | refresh `data/benchmark_inventory.json` from the Hub (metadata only; needs a token) |
+| `check-shards` | list Tatoeba shards whose stored sources no longer match the pinned test files |
+| `crap` | CRAP score per function; exits 1 if any reaches the threshold |
+| `smoke-metrics` | score two toy segments with COMET-22, MetricX-24 and GlotLID |
+| `free-gpus` | count free GPUs from `oarnodes` output on stdin |
+
+`scripts/g5k/` holds only the shell wrappers that OAR runs on Grid5000 nodes; each one calls an `xx2en` command.
 
 ## Benchmarks (X→EN)
 
@@ -70,8 +81,8 @@ Official language lists are still `pending`; the runner will refuse any model wh
 ```
 configs/                one YAML per model and per benchmark, plus languages.yaml
 data/                   committed benchmark inventory (metadata only)
-scripts/                snapshot_benchmarks.py (HF metadata), crap.py (CRAP score)
-src/xx_to_en/           config, languages, inventory, coverage, failures, stats, metrics, cache, lengths, report, cli
+scripts/g5k/            OAR job wrappers (shell only) that call xx2en on Grid5000 nodes
+src/xx_to_en/           the package: cli plus config, plan, runner, backends, metrics, dispatch, card, and maintenance modules
 tests/                  pytest suite
 ```
 

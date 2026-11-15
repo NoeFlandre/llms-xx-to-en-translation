@@ -8,29 +8,30 @@ Exits non-zero if any function reaches the threshold (default 6).
 
 Usage:
     uv run pytest --cov --cov-report=json:coverage.json
-    uv run python scripts/crap.py --threshold 6
+    uv run xx2en crap --threshold 6
 """
 
 from __future__ import annotations
 
-import argparse
 import ast
 import json
-import sys
 from pathlib import Path
 
 from radon.complexity import cc_visit
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def _within(lines: set[int], start: int, end: int) -> set[int]:
+    return {line for line in lines if start <= line <= end}
 
 
 def function_coverage(executed: set[int], missing: set[int], start: int, end: int) -> float:
     """Fraction of executable lines in [start, end] that were executed."""
-    lines_in_range = {line for line in executed | missing if start <= line <= end}
-    if not lines_in_range:
+    in_range = _within(executed | missing, start, end)
+    if not in_range:
         return 1.0
-    covered = {line for line in executed if start <= line <= end}
-    return len(covered) / len(lines_in_range)
+    return len(_within(executed, start, end)) / len(in_range)
 
 
 def crap_score(complexity: int, coverage: float) -> float:
@@ -75,28 +76,20 @@ DEFINITIONS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 
 def _function_end(path: Path, lineno: int, name: str) -> int:
     for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-        if isinstance(node, DEFINITIONS) and node.lineno == lineno and node.name == name:
+        if isinstance(node, DEFINITIONS) and _starts_at(node, lineno, name):
             return node.end_lineno or lineno
     return lineno
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument("--coverage", type=Path, default=ROOT / "coverage.json")
-    parser.add_argument("--source", type=Path, default=ROOT / "src" / "xx_to_en")
-    parser.add_argument("--threshold", type=float, default=6.0)
-    args = parser.parse_args(argv)
+def _starts_at(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef, lineno: int, name: str) -> bool:
+    return node.lineno == lineno and node.name == name
 
-    coverage_data = json.loads(args.coverage.read_text(encoding="utf-8"))
-    results = scan(args.source, coverage_data)
-    failing = [row for row in results if row[0] >= args.threshold]
+
+def run(coverage: Path, source: Path, threshold: float) -> int:
+    coverage_data = json.loads(coverage.read_text(encoding="utf-8"))
+    results = scan(source.resolve(), coverage_data)
+    failing = [row for row in results if row[0] >= threshold]
     print(f"functions: {len(results)}, max CRAP: {results[0][0]:.2f} ({results[0][1]})")
-    for score, name, complexity, lineno, coverage in failing:
-        print(f"  FAIL crap={score:.2f} cc={complexity} cov={coverage:.0%} {name}:{lineno}")
+    for score, name, complexity, lineno, share in failing:
+        print(f"  FAIL crap={score:.2f} cc={complexity} cov={share:.0%} {name}:{lineno}")
     return 1 if failing else 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

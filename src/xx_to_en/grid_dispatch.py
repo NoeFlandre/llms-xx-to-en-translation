@@ -1,21 +1,18 @@
-#!/usr/bin/env python3
 """Keep tiny one-hour jobs running on free Grid'5000 GPUs until every shard and score is in the dataset.
 
 Work is split per (model, benchmark), so one model can run several jobs at once. Runs on the development
 machine. On the frontends it only runs read-only commands (oarnodes, oarstat, usagepolicycheck) plus
 oarsub and oardel for the tiny jobs. Only default-queue clusters are used.
 
-    uv run python scripts/g5k/dispatch.py --dry-run   # one cycle, print placements only
-    uv run python scripts/g5k/dispatch.py             # loop every 5 minutes until nothing is pending
+    uv run xx2en dispatch --dry-run   # one cycle, print placements only
+    uv run xx2en dispatch             # loop every 5 minutes until nothing is pending
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import subprocess
-import sys
 import time
 from collections import Counter
 from datetime import datetime
@@ -33,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[2]
 STATE_FILE = Path.home() / ".cache" / "xx2en-dispatch" / "state.json"
 REPO = "NoeFlandre/llms-xx-to-en-translation"
 STALE_WAIT_S = 540
+ENDED_STATES = ("Terminated", "Error", "Gone")
 POLL_S = 300
 MAX_NO_PROGRESS = 3
 MAX_FAILURES_PER_CLUSTER = 2
@@ -111,28 +109,29 @@ def refresh_jobs(state: dict[str, Any], now: float, remaining: dict[str, int]) -
     kept = []
     for job in state["jobs"]:
         current = job_state(job["site"], job["id"])
-        if current in ("Terminated", "Error", "Gone"):
-            if remaining.get(job["model"], 0) >= job["remaining_at_submit"]:
-                no_progress = state.setdefault("no_progress", {})
-                no_progress[job["model"]] = no_progress.get(job["model"], 0) + 1
-            continue
-        if current == "Waiting" and now - job["submitted"] > STALE_WAIT_S:
-            cancel(job["site"], job["id"])
-            continue
-        kept.append({**job, "state": current})
+        if current in ENDED_STATES:
+            _count_if_no_progress(state, job, remaining)
+        elif not _cancel_if_stale(job, current, now):
+            kept.append({**job, "state": current})
     state["jobs"] = kept
+
+
+def _count_if_no_progress(state: dict[str, Any], job: dict[str, Any], remaining: dict[str, int]) -> None:
+    if remaining.get(job["model"], 0) >= job["remaining_at_submit"]:
+        no_progress = state.setdefault("no_progress", {})
+        no_progress[job["model"]] = no_progress.get(job["model"], 0) + 1
+
+
+def _cancel_if_stale(job: dict[str, Any], current: str, now: float) -> bool:
+    if current == "Waiting" and now - job["submitted"] > STALE_WAIT_S:
+        cancel(job["site"], job["id"])
+        return True
+    return False
 
 
 def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
     """Incomplete (model, benchmark) work, with what a placement needs to know about it."""
-    grouped: dict[tuple[str, str], list[int]] = {}
-    for name, model in project.models.items():
-        if not model.enabled:
-            continue
-        for shard in project.shards(model, done):
-            counts = grouped.setdefault((name, shard.benchmark), [0, 0])
-            counts[0] += shard_path(shard) not in done
-            counts[1] += score_path(shard) not in done
+    grouped = _missing_counts(project, done)
     out: dict[str, PendingInfo] = {}
     for (name, benchmark), (generation, scoring) in grouped.items():
         if generation + scoring == 0:
@@ -145,6 +144,18 @@ def pending_work(project: Project, done: set[str]) -> dict[str, PendingInfo]:
             model.fp16_ok and generation > 0,
         )
     return out
+
+
+def _missing_counts(project: Project, done: set[str]) -> dict[tuple[str, str], list[int]]:
+    grouped: dict[tuple[str, str], list[int]] = {}
+    for name, model in project.models.items():
+        if not model.enabled:
+            continue
+        for shard in project.shards(model, done):
+            counts = grouped.setdefault((name, shard.benchmark), [0, 0])
+            counts[0] += shard_path(shard) not in done
+            counts[1] += score_path(shard) not in done
+    return grouped
 
 
 def waiting_orphans(site: str, tracked: set[tuple[str, int]]) -> list[int]:
@@ -164,32 +175,35 @@ def usage_lines(sites: list[str]) -> list[str]:
 
 def build_pools(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> list[GpuPool]:
     """Free GPUs per usable cluster, on sites that already have a generation environment."""
-    ready = {site for site in {entry["site"] for entry in pools_config} if site_ready(site)}
-    counts = {site: probe_free(site) for site in ready}
-    pools = []
-    for entry in pools_config:
-        cluster_key = f"{entry['site']}/{entry['cluster']}"
-        if entry["site"] not in ready or state["failures"].get(cluster_key, 0) >= MAX_FAILURES_PER_CLUSTER:
-            continue
-        waiting = sum(
-            1
-            for job in state["jobs"]
-            if job["site"] == entry["site"]
-            and job["cluster"] == entry["cluster"]
-            and job["state"] == "Waiting"
-        )
-        free = max(0, counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"] - waiting)
-        pools.append(
-            GpuPool(
-                entry["site"],
-                entry["cluster"],
-                entry["memory_gb"],
-                free,
-                bool(entry.get("bf16", True)),
-                besteffort=entry.get("queue") == "besteffort",
-            )
-        )
-    return pools
+    ready, counts = _probe_sites(pools_config)
+    return [_pool(entry, counts, state) for entry in pools_config if _usable(entry, ready, state)]
+
+
+def _probe_sites(pools_config: list[dict[str, Any]]) -> tuple[set[str], dict[str, Counter[str]]]:
+    sites = {entry["site"] for entry in pools_config}
+    ready = {site for site in sites if site_ready(site)}
+    return ready, {site: probe_free(site) for site in ready}
+
+
+def _usable(entry: dict[str, Any], ready: set[str], state: dict[str, Any]) -> bool:
+    cluster_key = f"{entry['site']}/{entry['cluster']}"
+    return entry["site"] in ready and state["failures"].get(cluster_key, 0) < MAX_FAILURES_PER_CLUSTER
+
+
+def _pool(entry: dict[str, Any], counts: dict[str, Counter[str]], state: dict[str, Any]) -> GpuPool:
+    waiting = sum(
+        job["site"] == entry["site"] and job["cluster"] == entry["cluster"] and job["state"] == "Waiting"
+        for job in state["jobs"]
+    )
+    free = max(0, counts[entry["site"]][f"{entry['cluster']}|{entry['gpu_model']}"] - waiting)
+    return GpuPool(
+        entry["site"],
+        entry["cluster"],
+        entry["memory_gb"],
+        free,
+        bool(entry.get("bf16", True)),
+        besteffort=entry.get("queue") == "besteffort",
+    )
 
 
 def launch(
@@ -241,27 +255,8 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
     pending = pending_work(project, repo_files(REPO))
     refresh_jobs(state, time.time(), {key: info[1] for key, info in pending.items()})
     save_state(state)
-    tracked = {(job["site"], job["id"]) for job in state["jobs"]}
-    for entry in {entry["site"] for entry in pools_config}:
-        for job_id in waiting_orphans(entry, tracked):
-            cancel(entry, job_id)
-            print(f"  cancelled untracked waiting job {job_id} on {entry}", flush=True)
-    no_progress = state.get("no_progress", {})
-    ready = sorted(
-        (info[2], key, info[0], info[3], info[1])
-        for key, info in pending.items()
-        if no_progress.get(key, 0) < MAX_NO_PROGRESS
-    )
-    pools = build_pools(pools_config, state)
-    if daytime:
-        pools = [pool for pool in pools if pool.besteffort]
-    placements = choose_placements(
-        [Pending(key, need, fp16, jobs_for_pair(items)) for _, key, need, fp16, items in ready],
-        pools,
-        running_models=frozenset(job["model"] for job in state["jobs"]),
-        running_per_site=Counter(job["site"] for job in state["jobs"]),
-        running_besteffort=sum(job.get("queue") == "besteffort" for job in state["jobs"]),
-    )
+    _cancel_orphans(pools_config, state)
+    placements = _placements(pending, pools_config, state, daytime)
     summary = f"pending {len(pending)} work items; running {len(state['jobs'])}; placements {len(placements)}"
     print(f"{now:%H:%M}: {summary}", flush=True)
     launch(placements, state, dry_run, pending)
@@ -270,32 +265,66 @@ def cycle(project: Project, pools_config: list[dict[str, Any]], state: dict[str,
         print(f"  policy {line}", flush=True)
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+def _cancel_orphans(pools_config: list[dict[str, Any]], state: dict[str, Any]) -> None:
+    tracked = {(job["site"], job["id"]) for job in state["jobs"]}
+    for entry in {entry["site"] for entry in pools_config}:
+        for job_id in waiting_orphans(entry, tracked):
+            cancel(entry, job_id)
+            print(f"  cancelled untracked waiting job {job_id} on {entry}", flush=True)
+
+
+def _placements(
+    pending: dict[str, PendingInfo], pools_config: list[dict[str, Any]], state: dict[str, Any], daytime: bool
+) -> list[Any]:
+    return choose_placements(
+        _pending_pairs(pending, state),
+        _pools_for(pools_config, state, daytime),
+        running_models=frozenset(job["model"] for job in state["jobs"]),
+        running_per_site=Counter(job["site"] for job in state["jobs"]),
+        running_besteffort=sum(job.get("queue") == "besteffort" for job in state["jobs"]),
     )
-    parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--sites", type=Path, default=ROOT / "configs" / "sites.yaml")
-    args = parser.parse_args(argv)
+
+
+def _pools_for(pools_config: list[dict[str, Any]], state: dict[str, Any], daytime: bool) -> list[GpuPool]:
+    pools = build_pools(pools_config, state)
+    return [pool for pool in pools if pool.besteffort] if daytime else pools
+
+
+def _pending_pairs(pending: dict[str, PendingInfo], state: dict[str, Any]) -> list[Pending]:
+    return [
+        Pending(key, need, fp16, jobs_for_pair(items)) for _, key, need, fp16, items in _ready(pending, state)
+    ]
+
+
+def _ready(pending: dict[str, PendingInfo], state: dict[str, Any]) -> list[tuple[Any, ...]]:
+    no_progress = state.get("no_progress", {})
+    return sorted(
+        (info[2], key, info[0], info[3], info[1])
+        for key, info in pending.items()
+        if no_progress.get(key, 0) < MAX_NO_PROGRESS
+    )
+
+
+def _finished(project: Project, state: dict[str, Any]) -> bool:
+    remaining = pending_work(project, repo_files(REPO))
+    no_progress = state.get("no_progress", {})
+    blocked = sorted(key for key in remaining if no_progress.get(key, 0) >= MAX_NO_PROGRESS)
+    if len(blocked) != len(remaining):
+        return False
+    gaps = f"; accepted gaps: {', '.join(blocked)}" if blocked else ""
+    print(f"all shards and scores are in the dataset{gaps}", flush=True)
+    return True
+
+
+def run(dry_run: bool, sites: Path) -> None:
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
-    pools_config = load_pools(args.sites)
+    pools_config = load_pools(sites)
     state = load_state()
     while True:
         try:
-            cycle(project, pools_config, state, args.dry_run)
-            if args.dry_run:
-                return 0
-            remaining = pending_work(project, repo_files(REPO))
-            no_progress = state.get("no_progress", {})
-            blocked = sorted(key for key in remaining if no_progress.get(key, 0) >= MAX_NO_PROGRESS)
-            if len(blocked) == len(remaining):
-                gaps = f"; accepted gaps: {', '.join(blocked)}" if blocked else ""
-                print(f"all shards and scores are in the dataset{gaps}", flush=True)
-                return 0
+            cycle(project, pools_config, state, dry_run)
+            if dry_run or _finished(project, state):
+                return
         except Exception as error:
             print(f"{datetime.now():%H:%M}: cycle failed, retrying in {POLL_S}s: {error!r}", flush=True)
         time.sleep(POLL_S)
-
-
-if __name__ == "__main__":
-    sys.exit(main())

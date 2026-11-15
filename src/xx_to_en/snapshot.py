@@ -5,7 +5,7 @@ or corpus rows are downloaded. The output is committed so the coverage matrix ca
 rebuilt without network access.
 
 Usage:
-    python3 scripts/snapshot_benchmarks.py
+    uv run xx2en snapshot
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "data" / "benchmark_inventory.json"
 TOKEN_FILE = Path.home() / ".cache" / "huggingface" / "token"
 CORPUS_REPO = "NoeFlandre/GeoReSeT-Corpus-Fused"
@@ -76,14 +76,19 @@ def tatoeba_non_english_codes(repo: str = TATOEBA_REPO) -> list[str]:
     prefix = "tatoeba-test."
     codes: set[str] = set()
     for stem in repo_listing(repo, "data/test", ".tsv"):
-        if not stem.startswith(prefix):
-            continue
-        source, target = stem[len(prefix) :].split("-", 1)
-        if source == "eng" and target != "eng":
-            codes.add(target)
-        if target == "eng" and source != "eng":
-            codes.add(source)
+        if stem.startswith(prefix):
+            codes.update(_english_partner(stem[len(prefix) :]))
     return sorted(codes)
+
+
+def _english_partner(pair: str) -> set[str]:
+    source, target = pair.split("-", 1)
+    partners: set[str] = set()
+    if source == "eng" and target != "eng":
+        partners.add(target)
+    if target == "eng" and source != "eng":
+        partners.add(source)
+    return partners
 
 
 def _try(fetch: Callable[[], list[str]]) -> dict[str, Any]:
@@ -110,11 +115,7 @@ def build_inventory() -> dict[str, Any]:
     }
 
 
-def main() -> None:
+def run() -> str:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(build_inventory(), indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"wrote {OUT.relative_to(ROOT)}")
-
-
-if __name__ == "__main__":
-    main()
+    return f"wrote {OUT.relative_to(ROOT)}"

@@ -1,4 +1,4 @@
-"""Placement policy for tiny Grid'5000 jobs. Pure: the I/O loop lives in ``scripts/g5k/dispatch.py``.
+"""Placement policy for tiny Grid'5000 jobs. Pure: the I/O loop lives in ``xx_to_en.grid_dispatch``.
 
 Rules followed (Grid'5000 usage policy, default queue only):
 - A job of one hour or less is exempt from the daytime quota when submitted less than 10 minutes

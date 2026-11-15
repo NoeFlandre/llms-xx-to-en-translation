@@ -4,6 +4,10 @@
 - ``xx2en coverage``: write the language x benchmark coverage matrix.
 - ``xx2en plan --model M``: list the benchmark x language work the model is allowed to run.
 - ``xx2en run --model M``: translate on a node (needs the ``gpu`` extra and a GPU).
+- ``xx2en work`` / ``xx2en score``: generation and scoring jobs on Grid5000 nodes.
+- ``xx2en dispatch``: keep tiny jobs running until every shard and score is in the dataset.
+- ``xx2en card``, ``xx2en snapshot``, ``xx2en check-shards``, ``xx2en crap``, ``xx2en smoke-metrics``,
+  ``xx2en free-gpus``: maintenance and Grid5000 helpers.
 """
 
 from __future__ import annotations
@@ -380,6 +384,28 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--shard-count", type=int, default=1, help="number of parallel jobs for this model")
     score.add_argument("--configs", type=Path, default=Path("configs"))
     score.add_argument("--inventory", type=Path, default=Path("data/benchmark_inventory.json"))
+
+    card_parser = commands.add_parser("card", help="rebuild the dataset card and upload it as README.md")
+    card_parser.add_argument("--no-upload", action="store_true")
+
+    commands.add_parser(
+        "snapshot", help="snapshot benchmark language inventories from the Hub (metadata only)"
+    )
+    commands.add_parser("check-shards", help="list Tatoeba shards that no longer match the pinned test files")
+
+    dispatch = commands.add_parser("dispatch", help="keep tiny jobs running on free Grid5000 GPUs")
+    dispatch.add_argument("--dry-run", action="store_true", help="one cycle, print placements only")
+    dispatch.add_argument("--sites", type=Path, default=Path("configs/sites.yaml"))
+
+    crap = commands.add_parser("crap", help="CRAP score per function; exits 1 if any reaches the threshold")
+    crap.add_argument("--coverage", type=Path, default=Path("coverage.json"))
+    crap.add_argument("--source", type=Path, default=Path("src/xx_to_en"))
+    crap.add_argument("--threshold", type=float, default=6.0)
+
+    commands.add_parser("smoke-metrics", help="score two toy segments with COMET-22, MetricX-24 and GlotLID")
+
+    free = commands.add_parser("free-gpus", help="count free GPUs from oarnodes output on stdin")
+    free.add_argument("--site", required=True)
     return parser
 
 
@@ -411,6 +437,53 @@ def _score_cmd(args: argparse.Namespace) -> str:
     return score_command(_project(args), args)
 
 
+def _card_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.card_build import run
+
+    run(args.no_upload)
+    return ""
+
+
+def _snapshot_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.snapshot import run
+
+    return run()
+
+
+def _check_shards_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.shard_check import run
+
+    return run()
+
+
+def _dispatch_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.grid_dispatch import run
+
+    run(args.dry_run, args.sites)
+    return ""
+
+
+def _crap_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.crap import run
+
+    code = run(args.coverage, args.source, args.threshold)
+    if code:
+        raise SystemExit(code)
+    return ""
+
+
+def _smoke_metrics_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.metrics_smoke import run
+
+    return run()
+
+
+def _free_gpus_cmd(args: argparse.Namespace) -> str:
+    from xx_to_en.gpu_probe import run
+
+    return run(args.site)
+
+
 COMMANDS: dict[str, Callable[[argparse.Namespace], str]] = {
     "check-configs": _check_configs_cmd,
     "coverage": _coverage_cmd,
@@ -418,10 +491,19 @@ COMMANDS: dict[str, Callable[[argparse.Namespace], str]] = {
     "run": _run_cmd,
     "work": _work_cmd,
     "score": _score_cmd,
+    "card": _card_cmd,
+    "snapshot": _snapshot_cmd,
+    "check-shards": _check_shards_cmd,
+    "dispatch": _dispatch_cmd,
+    "crap": _crap_cmd,
+    "smoke-metrics": _smoke_metrics_cmd,
+    "free-gpus": _free_gpus_cmd,
 }
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    print(COMMANDS[args.command](args))
+    message = COMMANDS[args.command](args)
+    if message:
+        print(message)
     return 0

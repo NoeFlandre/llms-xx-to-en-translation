@@ -19,7 +19,7 @@ class Inventory:
 
 
 def load_inventory(path: Path) -> Inventory:
-    """Read ``data/benchmark_inventory.json`` as written by ``scripts/snapshot_benchmarks.py``."""
+    """Read ``data/benchmark_inventory.json`` as written by ``xx2en snapshot``."""
     data = json.loads(path.read_text(encoding="utf-8"))
     codes = {name: frozenset(entry.get("languages", [])) for name, entry in data["benchmarks"].items()}
     return Inventory(corpus_rows=dict(data["corpus"]["config_rows"]), benchmark_codes=codes)

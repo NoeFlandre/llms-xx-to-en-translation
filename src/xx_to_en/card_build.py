@@ -1,14 +1,11 @@
-#!/usr/bin/env python3
 """Rebuild the dataset card from the files in the dataset, save it, and upload it as README.md.
 
-uv run python scripts/build_card.py            # write docs/dataset_card.md and upload it
-uv run python scripts/build_card.py --no-upload
+uv run xx2en card              # write docs/dataset_card.md and upload it
+uv run xx2en card --no-upload
 """
 
 from __future__ import annotations
 
-import argparse
-import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -17,31 +14,38 @@ from huggingface_hub import HfApi, hf_hub_download
 
 from xx_to_en.card import KNOWN_GAPS, Cell, ModelScore, progress_table, render, results_table, winners_table
 from xx_to_en.cli import Project
+from xx_to_en.config import ModelConfig
 from xx_to_en.languages import corpus_languages
+from xx_to_en.plan import Shard
 from xx_to_en.report import per_language_winner, volume_weighted_mean
 from xx_to_en.results_store import repo_files, score_path, shard_path
 from xx_to_en.tables import read_table
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 REPO = "NoeFlandre/llms-xx-to-en-translation"
 FAILURE_FLAGS = ("empty", "repetition_loop", "length_ratio_outlier", "untranslated_copy", "wrong_language")
 
 
 def progress(project: Project, files: set[str]) -> dict[str, dict[str, Cell]]:
-    grid: dict[str, dict[str, Cell]] = {}
-    for name, model in project.models.items():
-        cells: dict[str, Cell] = {}
-        if model.enabled:
-            shards = project.shards(model, files)
-            for benchmark in project.benchmarks:
-                own = [s for s in shards if s.benchmark == benchmark]
-                cells[benchmark] = Cell(
-                    generated=sum(shard_path(s) in files for s in own),
-                    scored=sum(score_path(s) in files for s in own),
-                    total=len(own),
-                )
-        grid[name] = cells
-    return grid
+    return {name: _model_cells(project, model, files) for name, model in project.models.items()}
+
+
+def _model_cells(project: Project, model: ModelConfig, files: set[str]) -> dict[str, Cell]:
+    if not model.enabled:
+        return {}
+    shards = project.shards(model, files)
+    return {
+        benchmark: _cell([s for s in shards if s.benchmark == benchmark], files)
+        for benchmark in project.benchmarks
+    }
+
+
+def _cell(own: list[Shard], files: set[str]) -> Cell:
+    return Cell(
+        generated=sum(shard_path(s) in files for s in own),
+        scored=sum(score_path(s) in files for s in own),
+        total=len(own),
+    )
 
 
 def score_rows(files: set[str]) -> dict[str, list[dict]]:
@@ -62,45 +66,56 @@ def summarize(
 ) -> tuple[list[ModelScore], dict[str, tuple[str, float]], int]:
     """Per-model scores. Overall chrF++ uses only the languages every scored model covers, so scopes match."""
     volumes = corpus_languages(project.inventory.corpus_rows)
-    per_language: dict[str, dict[str, float]] = {}
-    raw: dict[str, list[dict]] = {}
-    for model, records in rows.items():
-        by_lang: dict[str, list[float]] = defaultdict(list)
-        for record in records:
-            by_lang[record["corpus_lang"]].append(record["chrf_pp"])
-        per_language[model] = {lang: sum(v) / len(v) for lang, v in by_lang.items()}
-        raw[model] = records
+    per_language = {model: _language_means(records) for model, records in rows.items()}
     common = set.intersection(*(set(lm) for lm in per_language.values())) if per_language else set()
-    summaries: list[ModelScore] = []
-    for model, records in raw.items():
-        comet = [r["comet22"] for r in records if r.get("comet22") is not None]
-        metricx = [r["metricx24"] for r in records if r.get("metricx24") is not None]
-        failures = sum(any(r.get(flag) for flag in FAILURE_FLAGS) for r in records)
-        common_scores = {lang: per_language[model][lang] for lang in common}
-        summaries.append(
-            ModelScore(
-                model=model,
-                chrf_pp=mean([r["chrf_pp"] for r in records]) or 0.0,
-                overall_chrf_pp=volume_weighted_mean(common_scores, volumes) if common_scores else 0.0,
-                comet22=mean(comet),
-                metricx24=mean(metricx),
-                failure_rate=failures / len(records),
-                segments=len(records),
-            )
-        )
-    winners = {}
-    if per_language:
-        best = per_language_winner(per_language)
-        winners = {lang: (model, per_language[model][lang]) for lang, model in best.items()}
-    return summaries, winners, len(common)
+    summaries = [
+        _model_score(model, records, per_language[model], common, volumes) for model, records in rows.items()
+    ]
+    return summaries, _winners(per_language), len(common)
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+def _language_means(records: list[dict]) -> dict[str, float]:
+    by_lang: dict[str, list[float]] = defaultdict(list)
+    for record in records:
+        by_lang[record["corpus_lang"]].append(record["chrf_pp"])
+    return {lang: sum(v) / len(v) for lang, v in by_lang.items()}
+
+
+def _model_score(
+    model: str, records: list[dict], language_means: dict[str, float], common: set[str], volumes: dict
+) -> ModelScore:
+    return ModelScore(
+        model=model,
+        chrf_pp=mean([r["chrf_pp"] for r in records]) or 0.0,
+        overall_chrf_pp=_overall_chrf(language_means, common, volumes),
+        comet22=_metric_mean(records, "comet22"),
+        metricx24=_metric_mean(records, "metricx24"),
+        failure_rate=_failure_rate(records),
+        segments=len(records),
     )
-    parser.add_argument("--no-upload", action="store_true")
-    args = parser.parse_args(argv)
+
+
+def _overall_chrf(language_means: dict[str, float], common: set[str], volumes: dict) -> float:
+    common_scores = {lang: language_means[lang] for lang in common}
+    return volume_weighted_mean(common_scores, volumes) if common_scores else 0.0
+
+
+def _metric_mean(records: list[dict], key: str) -> float | None:
+    return mean([r[key] for r in records if r.get(key) is not None])
+
+
+def _failure_rate(records: list[dict]) -> float:
+    return sum(any(r.get(flag) for flag in FAILURE_FLAGS) for r in records) / len(records)
+
+
+def _winners(per_language: dict[str, dict[str, float]]) -> dict[str, tuple[str, float]]:
+    if not per_language:
+        return {}
+    best = per_language_winner(per_language)
+    return {lang: (model, per_language[model][lang]) for lang, model in best.items()}
+
+
+def run(no_upload: bool) -> None:
     project = Project(ROOT / "configs", ROOT / "data" / "benchmark_inventory.json")
     files = repo_files(REPO)
     grid = progress(project, files)
@@ -122,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(card, encoding="utf-8")
     print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}")
-    if not args.no_upload:
+    if not no_upload:
         HfApi().upload_file(
             path_or_fileobj=str(out),
             path_in_repo="README.md",
@@ -131,8 +146,3 @@ def main(argv: list[str] | None = None) -> int:
             commit_message=f"Update dataset card ({updated})",
         )
         print("uploaded README.md")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
