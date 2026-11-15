@@ -11,7 +11,7 @@ The corpus is used only to understand what the text looks like. It is never tran
 | Part | State |
 |---|---|
 | Config schema and validation (20 models, 5 benchmarks) | done |
-| Language × benchmark coverage matrix | done, see [docs/coverage_matrix.md](docs/coverage_matrix.md) |
+| Language × benchmark coverage matrix | done (`uv run xx2en coverage` writes it) |
 | Failure checks, paired bootstrap CIs, chrF++, volume-weighted aggregation | done, unit-tested |
 | Output cache (content-addressed) and generation budget | done |
 | Model runner on Grid5000 (vLLM and transformers backends) | not started |
@@ -70,7 +70,6 @@ Official language lists are still `pending`; the runner will refuse any model wh
 ```
 configs/                one YAML per model and per benchmark, plus languages.yaml
 data/                   committed benchmark inventory (metadata only)
-docs/                   MkDocs site and generated coverage matrix
 scripts/                snapshot_benchmarks.py (HF metadata), crap.py (CRAP score)
 src/xx_to_en/           config, languages, inventory, coverage, failures, stats, metrics, cache, lengths, report, cli
 tests/                  pytest suite

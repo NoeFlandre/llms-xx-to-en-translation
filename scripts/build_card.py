@@ -119,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         known_gaps=KNOWN_GAPS,
     )
     out = ROOT / "docs" / "dataset_card.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(card, encoding="utf-8")
     print(f"wrote {out.relative_to(ROOT)}; scored models: {len(summaries)}")
     if not args.no_upload:
