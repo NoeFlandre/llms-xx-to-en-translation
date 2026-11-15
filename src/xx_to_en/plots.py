@@ -122,7 +122,8 @@ def tradeoff_svg(title: str, points: Sequence[Point], higher_is_better: bool) ->
     frontier = pareto_frontier(points, higher_is_better)
     direction = "higher is better" if higher_is_better else "lower is better"
     parts = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" font-family="sans-serif">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" '
+        f'viewBox="0 0 {WIDTH} {HEIGHT}" font-family="sans-serif">'
     ]
     parts += _axes(scale, direction, title)
     parts.append(_frontier_line(scale, frontier))
