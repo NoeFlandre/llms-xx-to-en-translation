@@ -50,3 +50,9 @@ def test_render_has_front_matter_and_sections():
     assert card.startswith("---\nlicense: cc-by-sa-4.0")
     for section in ("## Progress", "## Results", "## Files", "## Method"):
         assert section in card
+
+
+def test_render_places_the_split_note_under_progress():
+    card = render("now", "P", "R", "", split_note="`nllb-200-3.3b`: tatoeba shards are cut into parts.")
+    assert card.index("`nllb-200-3.3b`") < card.index("## Results")
+    assert "`nllb-200-3.3b`" not in render("now", "P", "R", "")

@@ -104,9 +104,11 @@ def render(
     winners: str,
     known_gaps: str = "",
     trade_offs: str = "",
+    split_note: str = "",
 ) -> str:
     gaps = f"## Known gaps\n\n{known_gaps}\n\n" if known_gaps else ""
     trade = f"## Trade-offs\n\n{TRADE_OFF_NOTE}\n\n{trade_offs}\n\n" if trade_offs else ""
+    split = f"{split_note}\n\n" if split_note else ""
     return f"""---
 license: cc-by-sa-4.0
 pretty_name: llms-xx-to-en-translation
@@ -129,7 +131,7 @@ Open models translating GeoReSeT corpus languages into English.
 
 Each cell: shards generated / total. A shard is 8 languages of one benchmark.
 
-{gaps}## Results
+{split}{gaps}## Results
 
 {results}
 

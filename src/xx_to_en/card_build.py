@@ -124,6 +124,17 @@ TRADE_OFFS = (
 PLOTS_BASE = f"https://huggingface.co/datasets/{REPO}/resolve/main"
 
 
+def split_note(project: Project) -> str:
+    """One line per enabled model whose shards are cut into parts, so its totals count parts."""
+    return "\n\n".join(
+        f"`{name}`: {benchmark} shards are cut into parts of {size} languages, because the 8-language "
+        f"shards did not finish within the one-hour job limit; its {benchmark} total counts parts."
+        for name, model in project.models.items()
+        if model.enabled
+        for benchmark, size in model.split_shards.items()
+    )
+
+
 def trade_off_plots(summaries: list[ModelScore], project: Project) -> tuple[str, dict[str, str]]:
     """Markdown that embeds one trade-off plot per metric, and the SVG files behind it by repository path."""
     lines: list[str] = []
@@ -165,6 +176,7 @@ def run(no_upload: bool) -> None:
         + results_table(summaries),
         winners_table(winners),
         trade_offs=trade_offs,
+        split_note=split_note(project),
     )
     out = ROOT / "docs" / "dataset_card.md"
     out.parent.mkdir(parents=True, exist_ok=True)

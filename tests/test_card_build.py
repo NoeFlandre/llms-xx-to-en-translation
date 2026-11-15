@@ -119,3 +119,10 @@ def test_run_writes_the_card_and_uploads_it_unless_told_not_to(tmp_path, monkeyp
     assert uploads == []
     card_build.run(no_upload=False)
     assert uploads[0]["path_in_repo"] == "README.md"
+
+
+def test_split_note_names_only_enabled_models_with_split_shards(project):
+    note = card_build.split_note(project)
+    assert "`nllb-200-3.3b`" in note
+    assert "2 languages" in note
+    assert "madlad400" not in note
