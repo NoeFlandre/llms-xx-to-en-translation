@@ -129,6 +129,12 @@ CANDIDATES = (
     (-9, -9, "end"),
     (9, 17, "start"),
     (-9, 17, "end"),
+    (9, -22, "start"),
+    (-9, -22, "end"),
+    (0, -22, "middle"),
+    (9, 30, "start"),
+    (-9, 30, "end"),
+    (0, 30, "middle"),
 )
 MARKER_RADIUS = 5
 LABEL_ASCENT = 9
@@ -204,10 +210,22 @@ def _refine(
         positions[index] = _label_position(point, anchors[index], taken)
 
 
+def _greedy(
+    points: Sequence[Point], anchors: list[tuple[float, float]], markers: list[_Box]
+) -> list[tuple[float, float, str]]:
+    taken = list(markers)
+    positions: list[tuple[float, float, str]] = []
+    for point, anchor in zip(points, anchors, strict=True):
+        position = _label_position(point, anchor, taken)
+        taken.append(_label_box(point.label, *position))
+        positions.append(position)
+    return positions
+
+
 def _placements(scale: _Scale, points: Sequence[Point]) -> list[tuple[float, float, str]]:
     anchors = [(scale.x_of(p.params_b), scale.y_of(p.value)) for p in points]
     markers = [_marker_box(x, y) for x, y in anchors]
-    positions = [_options(x, y)[0] for x, y in anchors]
+    positions = _greedy(points, anchors, markers)
     for _ in range(PLACEMENT_ROUNDS):
         _refine(points, anchors, markers, positions)
     return positions
